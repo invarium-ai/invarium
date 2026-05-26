@@ -29,7 +29,8 @@ classifiers = [
 [project.optional-dependencies]
 openai = ["openai-agents"]
 langgraph = ["langgraph", "langchain-core"]
-dev = ["pytest", "openai-agents", "langgraph", "langchain-core"]
+crewai = ["crewai"]
+dev = ["pytest", "openai-agents", "langgraph", "langchain-core", "crewai"]
 
 [project.urls]
 Homepage = "https://github.com/ashutosh-rath02/pygent-test"

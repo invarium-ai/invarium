@@ -1,8 +1,5 @@
 # AgentCheck Roadmap
 
-This roadmap is meant to keep AgentCheck focused.
-
-The goal is not to build every possible eval feature.
 The goal is to make agent behavior testing simple, useful, and repeatable.
 
 ## Guiding Principle
@@ -15,154 +12,113 @@ AgentCheck should help developers answer:
 
 ## Done
 
-These are already working today:
+Everything below is shipped and available in the current package.
 
-- repeated-run behavioral tests with `@agent_test(...)`
+### Core test model
+- repeated-run behavioral tests with `@agent_test(..., runs=N)`
 - normalized `AgentResult` and `ToolCall` models
-- core assertions:
-  - `used_tool(...)`
-  - `used_tool_times(...)`
-  - `used_tool_at_least(...)`
-  - `used_tool_at_most(...)`
-  - `did_not_use_tool(...)`
-  - `used_tools_in_order([...])`
-  - `steps_less_than(...)`
-  - `finished_successfully()`
-  - `did_not_error()`
-  - `final_output_contains(...)`
-  - `final_output_does_not_contain(...)`
-  - `did_not_claim_confirmation_without_tool(...)`
 - collected assertion mode with `verify()`
-- local traces, reports, and baselines
-- automatic Markdown report generation
-- regression detection
-- CLI commands:
-  - `test`
-  - `bless`
-  - `compare`
-  - `report`
-- pytest integration
-- plain Python adapter
-- OpenAI Agents SDK adapter
-- LangGraph adapter
-- local demo agents
-- intentional regression demo
-- live OpenAI integration tests
+- local traces, JSON reports, and baselines
+- automatic Markdown and HTML report generation
+- suite-specific baseline isolation
+- regression detection with behavior diffs
+
+### Assertions
+- `used_tool(name)`
+- `used_tool_times(name, count)`
+- `used_tool_at_least(name, count)`
+- `used_tool_at_most(name, count)`
+- `did_not_use_tool(name)`
+- `used_tools_in_order([...])`
+- `steps_less_than(n)`
+- `finished_successfully()`
+- `did_not_error()`
+- `final_output_contains(text)`
+- `final_output_does_not_contain(text)`
+- `did_not_claim_confirmation_without_tool(name)`
+- `used_any_tool()`
+- `final_output_matches_pattern(regex)`
+- `tool_succeeded(name)`
+
+### Failure taxonomy
+- every assertion failure carries a structured category:
+  `missing_required_tool`, `wrong_tool_order`, `step_budget_exceeded`,
+  `unsupported_success_claim`, `runtime_error`, `output_mismatch`, `tool_failure`
+- failure categories aggregated per test in reports
+
+### Regression analysis
+- tool coverage drops between current and baseline
+- primary tool path changes
+- step drift, latency drift, cost drift
+- failure category breakdown per regression
+
+### Flakiness detection
+- `flakiness_score` per test (variance-based, 0–1)
+- `unstable_tool_paths` flag when tool sequences vary across runs
+- shown in CLI output, Markdown report, and HTML report
+
+### CLI commands
+- `agentcheck test [path] [-k filter] [--html out.html] [--fail-on-regression]`
+- `agentcheck bless [path]`
+- `agentcheck compare`
+- `agentcheck report [--html out.html]`
+- `agentcheck baseline list`
+- `agentcheck baseline inspect <path>`
+- `agentcheck baseline delete <path> [--yes]`
+- `agentcheck contract init [name] [--output]`
+- `agentcheck contract validate [path]`
+- `agentcheck generate scenarios <contract> [--output] [--stub]`
+- `agentcheck config init [--output]`
+- `agentcheck history list [--limit N]`
+- `agentcheck history show <run-id>`
+
+### Agent contracts
+- JSON contract schema: expected tools, required order, step budget, success conditions, forbidden claims, scenario tags
+- `validate_contract()` with field-level error messages
+- `agentcheck contract init` and `agentcheck contract validate`
+
+### Scenario generation
+- `generate_scenarios()` builds a scenario pack from a contract across 6 categories
+- `render_scenario_stub()` emits a ready-to-edit Python test file
+- `agentcheck generate scenarios`
+
+### Config file
+- `agentcheck.json` at project root sets default runs, path, filter, fail-on-regression
+- `agentcheck config init` scaffolds the file
+
+### Run history
+- append-only local history log at `.agentcheck/history.json`
+- auto-recorded after every `agentcheck test` run
+- `agentcheck history list` and `history show <run-id>` with prefix lookup
+
+### Adapters
+- plain Python adapter (`PythonAdapter`)
+- OpenAI Agents SDK adapter (`OpenAIAgentsAdapter`)
+- LangGraph adapter (`LangGraphAdapter`)
+- CrewAI adapter (`CrewAIAdapter`)
+- HTTP endpoint adapter (`HttpAdapter`) for deployed agents
+
+### Developer experience
+- pytest integration via `pytest11` entry point
+- test filtering with `--filter` / `-k`
+- GitHub Actions step summary support
 - smoke-test script
 
-## Now
+## Not Planned
 
-These are the next highest-priority items.
-
-### 1. Better Reports
-
-- clearer summaries of what changed
-- better run-to-run failure grouping
-
-Why:
-- this improves the core developer experience immediately
-
-### 2. A Few More High-Value Assertions
-
-Candidate additions:
-
-- more broadly reusable behavior assertions based on real user demand
-
-Why:
-- these are broadly useful and easy to explain
-
-### 3. Onboarding Improvements
-
-- easier "first real agent test" flow
-- stronger templates/examples
-- less setup friction
-
-Why:
-- adoption depends heavily on how quickly someone gets to a working test
-
-## Next
-
-These should happen after the core loop is polished.
-
-### 4. Another Framework Adapter Based on Demand
-
-Candidates:
-
-- CrewAI
-- smolagents
-- another framework that real users request
-
-Why:
-- adapter work should follow demand, not guesses
-
-### 5. Better Regression Analysis
-
-- stronger baseline comparisons
-- better flaky test visibility
-- clearer summaries of changes in success rate and behavior
-
-Why:
-- this deepens the value of repeated runs
-
-## Later
-
-These are real possibilities, but not immediate priorities.
-
-### 6. CI-Focused Output Improvements
-
-- richer CI summaries
-- artifact-friendly report formats
-- nicer pull-request visibility
-
-### 7. More Safety-Oriented Assertions
-
-Examples:
-
-- clarification checks
-- forbidden content or policy checks
-- private-data exposure checks
-
-These should only be added if they stay broadly reusable.
-
-### 8. Hosted or Team Workflows
-
-Possible future directions:
-
-- hosted history
-- team baselines
-- private trace storage
-- flaky-test analytics
-
-Only worth doing if the core library proves genuinely useful first.
-
-## Not Right Now
-
-These are explicitly not current priorities:
+To stay focused, AgentCheck explicitly avoids:
 
 - building a dashboard-first product
-- adding lots of niche assertions
-- trying to solve all eval problems
-- turning the project into a benchmark platform
-- depending heavily on fuzzy LLM-as-judge scoring in v1
-
-## What Success Looks Like
-
-In the near term, success means:
-
-- a developer can install the package quickly
-- write one useful behavioral test
-- run it repeatedly
-- save a baseline
-- detect a regression
-- understand what broke without digging through raw traces
+- fuzzy LLM-as-judge scoring
+- benchmark platform features
+- niche assertions that only fit one team
+- heavy hosted infrastructure before the local product loop is proven
 
 ## Contributor-Friendly Areas
 
-Good places for contributors to help:
+Good places to contribute:
 
-- new adapters
-- report output improvements
-- better examples
-- test coverage
+- new adapters (smolagents, AutoGen, Pydantic AI, etc.)
+- better examples for each adapter
+- more broadly reusable assertions
 - documentation improvements
-- a few broadly useful new assertions
