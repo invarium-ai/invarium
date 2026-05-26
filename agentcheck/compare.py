@@ -113,14 +113,23 @@ def compare_reports(
         if previous is None:
             continue
         if report["success_rate"] < previous["success_rate"]:
+            cur_latency = report.get("average_latency")
+            prev_latency = previous.get("average_latency")
+            latency_delta = (cur_latency - prev_latency) if cur_latency is not None and prev_latency is not None else None
+            cur_cost = report.get("average_cost")
+            prev_cost = previous.get("average_cost")
+            cost_delta = (cur_cost - prev_cost) if cur_cost is not None and prev_cost is not None else None
             regressions.append(
                 {
                     "test_name": report["test_name"],
                     "previous_success_rate": previous["success_rate"],
                     "current_success_rate": report["success_rate"],
                     "step_delta": report["average_steps"] - previous.get("average_steps", 0.0),
+                    "latency_delta": latency_delta,
+                    "cost_delta": cost_delta,
                     "tool_coverage_drops": _tool_coverage_drops(report, previous),
                     "primary_path_change": _primary_path_change(report, previous),
+                    "failure_categories": report.get("failure_categories", {}),
                 }
             )
     matched_tests = sorted(overlapping_names)

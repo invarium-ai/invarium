@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .baseline import load_baseline, save_baseline
 from .compare import compare_reports
+from .contracts import CONTRACT_FILE, _default_contract, load_contract, save_contract, validate_contract
 from .discovery import collect_registered_tests, discover_test_files, import_test_file
 from .report import SessionReport, render_markdown_report, write_github_step_summary
 from .runners import run_test_suite
@@ -38,6 +39,17 @@ def build_parser() -> argparse.ArgumentParser:
         if command in {"test", "bless"}:
             subparser.add_argument("path", nargs="?", default=".")
             subparser.add_argument("--fail-on-regression", action="store_true")
+
+    contract_parser = subparsers.add_parser("contract")
+    contract_subparsers = contract_parser.add_subparsers(dest="contract_command", required=True)
+
+    init_parser = contract_subparsers.add_parser("init")
+    init_parser.add_argument("name", nargs="?", default="my_agent", help="Agent name for the contract")
+    init_parser.add_argument("--output", default=None, help=f"Output file path (default: {CONTRACT_FILE})")
+
+    validate_parser = contract_subparsers.add_parser("validate")
+    validate_parser.add_argument("path", nargs="?", default=CONTRACT_FILE, help="Path to contract JSON file")
+
     return parser
 
 
@@ -52,6 +64,11 @@ def main(argv: list[str] | None = None) -> int:
         return _compare_only()
     if args.command == "report":
         return _report_only()
+    if args.command == "contract":
+        if args.contract_command == "init":
+            return _contract_init(args.name, args.output)
+        if args.contract_command == "validate":
+            return _contract_validate(args.path)
     return EXIT_CONFIG_ERROR
 
 
@@ -100,6 +117,57 @@ def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool) -> int:
         return EXIT_REGRESSION
     if any_behavior_failures:
         return EXIT_BEHAVIOR_FAILED
+    return EXIT_SUCCESS
+
+
+def _contract_init(name: str, output: str | None) -> int:
+    output_path = Path(output) if output else Path(CONTRACT_FILE)
+    if output_path.exists():
+        print(f"Contract file already exists: {output_path}")
+        print("Delete it or specify a different path with --output.")
+        return EXIT_CONFIG_ERROR
+    contract = _default_contract(name)
+    save_contract(contract, output_path)
+    print(_style("Contract initialized", bold=True))
+    print(_kv("File", str(output_path)))
+    print(_kv("Name", contract.name))
+    print("")
+    print("Edit the file to describe your agent's expected behavior.")
+    print(f"Then run: agentcheck contract validate {output_path}")
+    return EXIT_SUCCESS
+
+
+def _contract_validate(path: str) -> int:
+    contract_path = Path(path)
+    if not contract_path.exists():
+        print(f"Contract file not found: {contract_path}")
+        print(f"Create one with: agentcheck contract init")
+        return EXIT_CONFIG_ERROR
+    try:
+        contract = load_contract(contract_path)
+    except Exception as exc:
+        print(f"{_badge('ERROR', color='red')} Failed to parse contract: {exc}")
+        return EXIT_CONFIG_ERROR
+
+    errors = validate_contract(contract)
+    if errors:
+        print(f"{_badge('INVALID', color='red')} {contract_path}")
+        for error in errors:
+            print(f"  - [{error.field}] {error.message}")
+        return EXIT_BEHAVIOR_FAILED
+
+    print(f"{_badge('VALID', color='green')} {contract_path}")
+    print(_kv("Name", contract.name))
+    if contract.description:
+        print(_kv("Description", contract.description))
+    if contract.expected_tools:
+        print(_kv("Tools", ", ".join(contract.expected_tools)))
+    if contract.required_tool_order:
+        print(_kv("Order", " -> ".join(contract.required_tool_order)))
+    if contract.step_budget is not None:
+        print(_kv("Step budget", str(contract.step_budget)))
+    if contract.scenario_tags:
+        print(_kv("Tags", ", ".join(contract.scenario_tags)))
     return EXIT_SUCCESS
 
 
@@ -223,12 +291,26 @@ def _render_session_summary_dict(session_data: dict) -> str:
         lines.append(_kv("Success", f"{report['success_rate']:.1f}%"))
         lines.append(_kv("Avg steps", f"{report['average_steps']:.1f}"))
 
+        if report.get("average_latency") is not None:
+            lines.append(_kv("Latency", f"{report['average_latency']:.2f}s"))
+        if report.get("average_cost") is not None:
+            lines.append(_kv("Cost", f"${report['average_cost']:.4f}"))
+        flakiness = report.get("flakiness_score", 0.0)
+        if flakiness > 0:
+            label = "high" if flakiness >= 0.5 else "moderate" if flakiness >= 0.2 else "low"
+            lines.append(_kv("Flakiness", f"{flakiness:.3f} ({label})"))
+        if report.get("unstable_tool_paths"):
+            lines.append(_kv("Tool paths", "unstable"))
         tool_summary = _format_tool_presence(report)
         if tool_summary:
             lines.append(_kv("Tools", tool_summary))
         primary_path = _format_primary_path(report)
         if primary_path:
             lines.append(_kv("Path", primary_path))
+
+        failure_categories = report.get("failure_categories", {})
+        if failure_categories:
+            lines.append(_kv("Fail cats", ", ".join(f"{c}:{n}" for c, n in failure_categories.items())))
 
         if report["failure_reasons"]:
             lines.append(_kv("Failures", ""))
@@ -272,6 +354,13 @@ def _render_comparison(comparison: dict) -> str:
             )
         )
         lines.append(_kv("Step delta", f"{regression['step_delta']:+.1f}"))
+        if regression.get("latency_delta") is not None:
+            lines.append(_kv("Latency", f"{regression['latency_delta']:+.2f}s"))
+        if regression.get("cost_delta") is not None:
+            lines.append(_kv("Cost", f"${regression['cost_delta']:+.4f}"))
+        failure_categories = regression.get("failure_categories", {})
+        if failure_categories:
+            lines.append(_kv("Failure cats", ", ".join(f"{c}:{n}" for c, n in failure_categories.items())))
         primary_path_change = regression.get("primary_path_change")
         if primary_path_change:
             previous_path = " -> ".join(primary_path_change["previous_path"]) or "(no tools)"

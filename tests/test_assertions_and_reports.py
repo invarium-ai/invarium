@@ -242,28 +242,28 @@ def test_compare_reports_includes_behavior_deltas_for_regressions():
     )
 
     assert comparison["summary"] == "Regression detected in 1 of 1 matched test(s)."
-    assert comparison["regressions"] == [
+    regression = comparison["regressions"][0]
+    assert regression["test_name"] == "test_booking_agent"
+    assert regression["previous_success_rate"] == 100.0
+    assert regression["current_success_rate"] == 60.0
+    assert abs(regression["step_delta"] - 0.4) < 1e-9
+    assert regression["latency_delta"] is None
+    assert regression["cost_delta"] is None
+    assert regression["failure_categories"] == {}
+    assert regression["tool_coverage_drops"] == [
         {
-            "test_name": "test_booking_agent",
-            "previous_success_rate": 100.0,
-            "current_success_rate": 60.0,
-            "step_delta": 0.3999999999999999,
-            "tool_coverage_drops": [
-                {
-                    "tool_name": "booking_tool",
-                    "previous_rate": 100.0,
-                    "current_rate": 60.0,
-                    "delta": -40.0,
-                }
-            ],
-            "primary_path_change": {
-                "previous_path": ["restaurant_search", "booking_tool"],
-                "current_path": ["restaurant_search"],
-                "previous_rate": 100.0,
-                "current_rate": 60.0,
-            },
+            "tool_name": "booking_tool",
+            "previous_rate": 100.0,
+            "current_rate": 60.0,
+            "delta": -40.0,
         }
     ]
+    assert regression["primary_path_change"] == {
+        "previous_path": ["restaurant_search", "booking_tool"],
+        "current_path": ["restaurant_search"],
+        "previous_rate": 100.0,
+        "current_rate": 60.0,
+    }
 
 
 def test_suite_baselines_are_isolated(monkeypatch):
@@ -296,3 +296,208 @@ def test_write_github_step_summary_writes_markdown():
 
     assert written is True
     assert summary_path.read_text(encoding="utf-8") == markdown
+
+
+# ── New assertions ──────────────────────────────────────────────────────────
+
+def test_used_any_tool_passes_when_at_least_one_tool_used():
+    result = AgentResult(
+        input="q", final_output="done",
+        tool_calls=[ToolCall(name="search")], steps=1,
+    )
+    expect(result).used_any_tool().verify()
+
+
+def test_used_any_tool_fails_when_no_tools_used():
+    result = AgentResult(input="q", final_output="done", steps=0)
+    import pytest
+    with pytest.raises(Exception):
+        expect(result).used_any_tool().verify()
+
+
+def test_final_output_matches_pattern_passes():
+    result = AgentResult(input="q", final_output="Order #12345 confirmed", steps=1)
+    expect(result).final_output_matches_pattern(r"Order #\d+").verify()
+
+
+def test_final_output_matches_pattern_fails():
+    result = AgentResult(input="q", final_output="no match here", steps=1)
+    import pytest
+    with pytest.raises(Exception):
+        expect(result).final_output_matches_pattern(r"Order #\d+").verify()
+
+
+def test_tool_succeeded_passes_when_tool_succeeded():
+    result = AgentResult(
+        input="q", final_output="done",
+        tool_calls=[ToolCall(name="book", success=True)], steps=1,
+    )
+    expect(result).tool_succeeded("book").verify()
+
+
+def test_tool_succeeded_fails_when_tool_failed():
+    result = AgentResult(
+        input="q", final_output="done",
+        tool_calls=[ToolCall(name="book", success=False)], steps=1,
+    )
+    import pytest
+    with pytest.raises(Exception):
+        expect(result).tool_succeeded("book").verify()
+
+
+# ── Failure taxonomy ────────────────────────────────────────────────────────
+
+def test_assertion_record_has_category_on_failure():
+    result = AgentResult(input="q", final_output="done", steps=0)
+    check = expect(result, collect=True)
+    check.used_tool("missing_tool")
+    record = check.records[0]
+    assert not record.passed
+    assert record.category == "missing_required_tool"
+
+
+def test_assertion_record_has_no_category_on_pass():
+    result = AgentResult(
+        input="q", final_output="done",
+        tool_calls=[ToolCall(name="search")], steps=1,
+    )
+    check = expect(result, collect=True)
+    check.used_tool("search")
+    record = check.records[0]
+    assert record.passed
+    assert record.category is None
+
+
+def test_build_test_report_aggregates_failure_categories():
+    from agentcheck.assertions import AssertionRecord
+    from agentcheck.report import TestRun as AgentTestRun, build_test_report, new_run_id
+
+    failed_run = AgentTestRun(
+        test_name="t",
+        run_id=new_run_id(),
+        result=AgentResult(input="q", final_output="done", steps=1),
+        assertions=[
+            AssertionRecord(name="used_tool", passed=False, message="missing", category="missing_required_tool"),
+            AssertionRecord(name="steps_less_than", passed=False, message="exceeded", category="step_budget_exceeded"),
+        ],
+        passed=False,
+        error="missing",
+    )
+    report = build_test_report("t", [failed_run])
+    assert report.failure_categories.get("missing_required_tool", 0) >= 1
+    assert report.failure_categories.get("step_budget_exceeded", 0) >= 1
+
+
+# ── Flakiness ───────────────────────────────────────────────────────────────
+
+def test_flakiness_score_is_zero_for_all_passing():
+    runs = [
+        AgentTestRun(
+            test_name="t", run_id=new_run_id(),
+            result=AgentResult(input="q", final_output="done",
+                               tool_calls=[ToolCall(name="search")], steps=1),
+            passed=True,
+        )
+        for _ in range(5)
+    ]
+    report = build_test_report("t", runs)
+    assert report.flakiness_score == 0.0
+    assert report.unstable_tool_paths is False
+
+
+def test_flakiness_score_is_nonzero_for_mixed_results():
+    pass_run = AgentTestRun(
+        test_name="t", run_id=new_run_id(),
+        result=AgentResult(input="q", final_output="done",
+                           tool_calls=[ToolCall(name="search")], steps=1),
+        passed=True,
+    )
+    fail_run = AgentTestRun(
+        test_name="t", run_id=new_run_id(),
+        result=AgentResult(input="q", final_output="done", steps=0),
+        passed=False,
+        error="oops",
+    )
+    report = build_test_report("t", [pass_run, fail_run])
+    assert report.flakiness_score > 0.0
+
+
+def test_unstable_tool_paths_detected():
+    run_a = AgentTestRun(
+        test_name="t", run_id=new_run_id(),
+        result=AgentResult(input="q", final_output="done",
+                           tool_calls=[ToolCall(name="a"), ToolCall(name="b")], steps=2),
+        passed=True,
+    )
+    run_b = AgentTestRun(
+        test_name="t", run_id=new_run_id(),
+        result=AgentResult(input="q", final_output="done",
+                           tool_calls=[ToolCall(name="a")], steps=1),
+        passed=True,
+    )
+    report = build_test_report("t", [run_a, run_b])
+    assert report.unstable_tool_paths is True
+
+
+# ── Contracts ───────────────────────────────────────────────────────────────
+
+def test_valid_contract_passes_validation():
+    from agentcheck.contracts import AgentContract, validate_contract
+    contract = AgentContract(
+        name="search_agent",
+        expected_tools=["search", "summarize"],
+        required_tool_order=["search", "summarize"],
+        step_budget=5,
+        scenario_tags=["happy_path"],
+    )
+    errors = validate_contract(contract)
+    assert errors == []
+
+
+def test_contract_validation_catches_empty_name():
+    from agentcheck.contracts import AgentContract, validate_contract
+    contract = AgentContract(name="")
+    errors = validate_contract(contract)
+    assert any(e.field == "name" for e in errors)
+
+
+def test_contract_validation_catches_invalid_step_budget():
+    from agentcheck.contracts import AgentContract, validate_contract
+    contract = AgentContract(name="my_agent", step_budget=0)
+    errors = validate_contract(contract)
+    assert any(e.field == "step_budget" for e in errors)
+
+
+def test_contract_validation_catches_unknown_scenario_tag():
+    from agentcheck.contracts import AgentContract, validate_contract
+    contract = AgentContract(name="my_agent", scenario_tags=["not_a_real_tag"])
+    errors = validate_contract(contract)
+    assert any(e.field == "scenario_tags" for e in errors)
+
+
+def test_contract_validation_catches_order_tool_not_in_expected():
+    from agentcheck.contracts import AgentContract, validate_contract
+    contract = AgentContract(
+        name="my_agent",
+        expected_tools=["search"],
+        required_tool_order=["search", "ghost_tool"],
+    )
+    errors = validate_contract(contract)
+    assert any(e.field == "required_tool_order" for e in errors)
+
+
+def test_contract_round_trips_through_json():
+    from agentcheck.contracts import AgentContract, load_contract, save_contract
+    contract = AgentContract(
+        name="my_agent",
+        description="test",
+        expected_tools=["search"],
+        step_budget=3,
+        scenario_tags=["happy_path"],
+    )
+    path = Path(".build-tmp") / f"contract-{uuid4().hex}.json"
+    save_contract(contract, path)
+    loaded = load_contract(path)
+    assert loaded.name == contract.name
+    assert loaded.step_budget == contract.step_budget
+    assert loaded.scenario_tags == contract.scenario_tags
