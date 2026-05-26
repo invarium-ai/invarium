@@ -5,9 +5,11 @@ import os
 import sys
 from pathlib import Path
 
-from .baseline import load_baseline, save_baseline
+from .baseline import delete_baseline, list_baselines, load_baseline, save_baseline
 from .compare import compare_reports
-from .contracts import CONTRACT_FILE, _default_contract, load_contract, save_contract, validate_contract
+from .config import CONFIG_FILE, AgentCheckConfig, _default_config, load_config, save_config
+from .contracts import CONTRACT_FILE as CONTRACT_FILE_NAME
+from .contracts import _default_contract, load_contract, save_contract, validate_contract
 from .discovery import collect_registered_tests, discover_test_files, import_test_file
 from .report import SessionReport, render_markdown_report, write_github_step_summary
 from .runners import run_test_suite
@@ -39,16 +41,40 @@ def build_parser() -> argparse.ArgumentParser:
         if command in {"test", "bless"}:
             subparser.add_argument("path", nargs="?", default=".")
             subparser.add_argument("--fail-on-regression", action="store_true")
+            subparser.add_argument(
+                "--filter", "-k",
+                dest="filter_pattern",
+                default=None,
+                metavar="PATTERN",
+                help="Run only tests whose names contain PATTERN (case-insensitive substring match).",
+            )
+
+    config_parser = subparsers.add_parser("config")
+    config_subparsers = config_parser.add_subparsers(dest="config_command", required=True)
+    config_init_p = config_subparsers.add_parser("init")
+    config_init_p.add_argument("--output", default=None, help=f"Output path (default: {CONFIG_FILE})")
+
+    baseline_parser = subparsers.add_parser("baseline")
+    baseline_subparsers = baseline_parser.add_subparsers(dest="baseline_command", required=True)
+
+    baseline_subparsers.add_parser("list")
+
+    inspect_parser = baseline_subparsers.add_parser("inspect")
+    inspect_parser.add_argument("path", help="Path to a baseline JSON file")
+
+    delete_parser = baseline_subparsers.add_parser("delete")
+    delete_parser.add_argument("path", help="Path to a baseline JSON file to delete")
+    delete_parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
 
     contract_parser = subparsers.add_parser("contract")
     contract_subparsers = contract_parser.add_subparsers(dest="contract_command", required=True)
 
     init_parser = contract_subparsers.add_parser("init")
     init_parser.add_argument("name", nargs="?", default="my_agent", help="Agent name for the contract")
-    init_parser.add_argument("--output", default=None, help=f"Output file path (default: {CONTRACT_FILE})")
+    init_parser.add_argument("--output", default=None, help=f"Output file path (default: {CONTRACT_FILE_NAME})")
 
     validate_parser = contract_subparsers.add_parser("validate")
-    validate_parser.add_argument("path", nargs="?", default=CONTRACT_FILE, help="Path to contract JSON file")
+    validate_parser.add_argument("path", nargs="?", default=CONTRACT_FILE_NAME, help="Path to contract JSON file")
 
     return parser
 
@@ -59,11 +85,30 @@ def main(argv: list[str] | None = None) -> int:
     ensure_artifact_dirs()
 
     if args.command in {"test", "bless"}:
-        return _run_tests(Path(args.path), bless=args.command == "bless", fail_on_regression=args.fail_on_regression)
+        cfg = load_config(Path(args.path) if hasattr(args, "path") else None)
+        path = Path(args.path)
+        fail_on_regression = args.fail_on_regression or cfg.fail_on_regression
+        filter_pattern = args.filter_pattern or cfg.filter_pattern
+        return _run_tests(
+            path,
+            bless=args.command == "bless",
+            fail_on_regression=fail_on_regression,
+            filter_pattern=filter_pattern,
+        )
     if args.command == "compare":
         return _compare_only()
     if args.command == "report":
         return _report_only()
+    if args.command == "config":
+        if args.config_command == "init":
+            return _config_init(args.output)
+    if args.command == "baseline":
+        if args.baseline_command == "list":
+            return _baseline_list()
+        if args.baseline_command == "inspect":
+            return _baseline_inspect(args.path)
+        if args.baseline_command == "delete":
+            return _baseline_delete(args.path, confirmed=args.yes)
     if args.command == "contract":
         if args.contract_command == "init":
             return _contract_init(args.name, args.output)
@@ -72,11 +117,14 @@ def main(argv: list[str] | None = None) -> int:
     return EXIT_CONFIG_ERROR
 
 
-def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool) -> int:
+def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_pattern: str | None = None) -> int:
     _load_tests(root)
-    definitions = collect_registered_tests()
+    definitions = collect_registered_tests(filter_pattern)
     if not definitions:
-        print("No AgentCheck tests found.")
+        if filter_pattern:
+            print(f"No AgentCheck tests matched filter `{filter_pattern}`.")
+        else:
+            print("No AgentCheck tests found.")
         return EXIT_CONFIG_ERROR
 
     reports, session, trace_payload = run_test_suite(definitions)
@@ -120,8 +168,90 @@ def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool) -> int:
     return EXIT_SUCCESS
 
 
+def _config_init(output: str | None) -> int:
+    output_path = Path(output) if output else Path(CONFIG_FILE)
+    if output_path.exists():
+        print(f"Config file already exists: {output_path}")
+        print("Delete it or specify a different path with --output.")
+        return EXIT_CONFIG_ERROR
+    cfg = _default_config()
+    save_config(cfg, output_path)
+    print(_style("Config initialized", bold=True))
+    print(_kv("File", str(output_path)))
+    print("")
+    print("Edit the file to set your default runs, path, and options.")
+    return EXIT_SUCCESS
+
+
+def _baseline_list() -> int:
+    entries = list_baselines()
+    if not entries:
+        print("No baselines found. Run `agentcheck bless` to save one.")
+        return EXIT_SUCCESS
+    print(_style(f"Baselines ({len(entries)})", bold=True))
+    for entry in entries:
+        tag = " [latest]" if entry.is_latest else ""
+        label = "BASELINE"
+        color = "cyan" if entry.is_latest else "blue"
+        print(f"\n{_badge(label, color=color)}{tag} {entry.path.name}")
+        if entry.suite_id:
+            print(_kv("Suite", entry.suite_id, width=10))
+        print(_kv("Tests", str(entry.test_count), width=10))
+        if entry.created_at:
+            print(_kv("Created", entry.created_at, width=10))
+        print(_kv("Path", str(entry.path), width=10))
+    return EXIT_SUCCESS
+
+
+def _baseline_inspect(path_str: str) -> int:
+    from .storage import read_json
+    path = Path(path_str)
+    if not path.exists():
+        print(f"Baseline file not found: {path}")
+        return EXIT_CONFIG_ERROR
+    try:
+        data = read_json(path)
+    except Exception as exc:
+        print(f"{_badge('ERROR', color='red')} Failed to read baseline: {exc}")
+        return EXIT_CONFIG_ERROR
+
+    print(_style("Baseline", bold=True))
+    print(_kv("File", str(path)))
+    if data.get("suite_id"):
+        print(_kv("Suite", data["suite_id"]))
+    if data.get("created_at"):
+        print(_kv("Created", data["created_at"]))
+    reports = data.get("reports", [])
+    print(_kv("Tests", str(len(reports))))
+    for report in reports:
+        status_color = "green" if report.get("success_rate", 0) >= 100 else "yellow"
+        print(f"\n  {_badge('TEST', color=status_color)} {report['test_name']}")
+        print(_kv("Success", f"{report.get('success_rate', 0):.1f}%", indent=4, width=10))
+        print(_kv("Avg steps", f"{report.get('average_steps', 0):.1f}", indent=4, width=10))
+        tool_presence = report.get("tool_presence", {})
+        if tool_presence:
+            tools_str = ", ".join(f"{t} {r:.0f}%" for t, r in tool_presence.items())
+            print(_kv("Tools", tools_str, indent=4, width=10))
+    return EXIT_SUCCESS
+
+
+def _baseline_delete(path_str: str, *, confirmed: bool) -> int:
+    path = Path(path_str)
+    if not path.exists():
+        print(f"Baseline file not found: {path}")
+        return EXIT_CONFIG_ERROR
+    if not confirmed:
+        answer = input(f"Delete baseline `{path}`? [y/N] ").strip().lower()
+        if answer not in ("y", "yes"):
+            print("Aborted.")
+            return EXIT_SUCCESS
+    delete_baseline(path)
+    print(f"Deleted: {path}")
+    return EXIT_SUCCESS
+
+
 def _contract_init(name: str, output: str | None) -> int:
-    output_path = Path(output) if output else Path(CONTRACT_FILE)
+    output_path = Path(output) if output else Path(CONTRACT_FILE_NAME)
     if output_path.exists():
         print(f"Contract file already exists: {output_path}")
         print("Delete it or specify a different path with --output.")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from .storage import BASELINE_DIR, read_json, write_json
@@ -35,3 +36,41 @@ def load_baseline(suite_id: str | None = None) -> dict | None:
     if suite_id is None or legacy_data.get("suite_id") == suite_id:
         return legacy_data
     return None
+
+
+@dataclass
+class BaselineEntry:
+    path: Path
+    suite_id: str | None
+    test_count: int
+    created_at: str | None
+    is_latest: bool
+
+
+def list_baselines() -> list[BaselineEntry]:
+    if not BASELINE_DIR.exists():
+        return []
+    latest_path = BASELINE_FILE.resolve() if BASELINE_FILE.exists() else None
+    entries: list[BaselineEntry] = []
+    for file in sorted(BASELINE_DIR.glob("*.json")):
+        try:
+            data = read_json(file)
+        except Exception:
+            continue
+        reports = data.get("reports", [])
+        entries.append(
+            BaselineEntry(
+                path=file,
+                suite_id=data.get("suite_id"),
+                test_count=len(reports),
+                created_at=data.get("created_at"),
+                is_latest=file.resolve() == latest_path,
+            )
+        )
+    return entries
+
+
+def delete_baseline(path: Path) -> None:
+    path.unlink(missing_ok=True)
+    if BASELINE_FILE.exists() and BASELINE_FILE.resolve() == path.resolve():
+        BASELINE_FILE.unlink(missing_ok=True)

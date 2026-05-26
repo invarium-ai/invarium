@@ -28,7 +28,11 @@ def import_test_file(path: Path) -> None:
     spec.loader.exec_module(module)
 
 
-def collect_registered_tests() -> list[AgentTestDefinition]:
+def collect_registered_tests(filter_pattern: str | None = None) -> list[AgentTestDefinition]:
     from .testing import REGISTERED_TESTS
 
-    return list(REGISTERED_TESTS)
+    tests = list(REGISTERED_TESTS)
+    if filter_pattern:
+        pattern = filter_pattern.lower()
+        tests = [t for t in tests if pattern in t.name.lower()]
+    return tests
