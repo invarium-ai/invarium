@@ -1,5 +1,5 @@
 from .assertions import expect
-from .adapters import LangGraphAdapter, OpenAIAgentsAdapter, PythonAdapter
+from .adapters import CrewAIAdapter, HttpAdapter, LangGraphAdapter, OpenAIAgentsAdapter, PythonAdapter
 from .config import AgentCheckConfig, load_config
 from .contracts import AgentContract, load_contract, save_contract, validate_contract
 from .result import AgentResult, ToolCall
@@ -13,6 +13,8 @@ __all__ = [
     "PythonAdapter",
     "OpenAIAgentsAdapter",
     "LangGraphAdapter",
+    "HttpAdapter",
+    "CrewAIAdapter",
     "AgentContract",
     "load_contract",
     "save_contract",

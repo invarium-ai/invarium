@@ -11,6 +11,9 @@ from .config import CONFIG_FILE, AgentCheckConfig, _default_config, load_config,
 from .contracts import CONTRACT_FILE as CONTRACT_FILE_NAME
 from .contracts import _default_contract, load_contract, save_contract, validate_contract
 from .discovery import collect_registered_tests, discover_test_files, import_test_file
+from .history import get_entry, get_history, record_run
+from .html_report import render_html_report
+from .scenarios import generate_scenarios, render_scenario_stub, save_scenario_pack
 from .report import SessionReport, render_markdown_report, write_github_step_summary
 from .runners import run_test_suite
 from .storage import REPORT_DIR, TRACE_DIR, ensure_artifact_dirs, read_json, write_json
@@ -48,6 +51,35 @@ def build_parser() -> argparse.ArgumentParser:
                 metavar="PATTERN",
                 help="Run only tests whose names contain PATTERN (case-insensitive substring match).",
             )
+            subparser.add_argument(
+                "--html",
+                dest="html_output",
+                default=None,
+                metavar="PATH",
+                help="Write an HTML report to PATH (e.g. report.html).",
+            )
+        if command == "report":
+            subparser.add_argument(
+                "--html",
+                dest="html_output",
+                default=None,
+                metavar="PATH",
+                help="Write an HTML report to PATH from the latest run.",
+            )
+
+    history_parser = subparsers.add_parser("history")
+    history_subparsers = history_parser.add_subparsers(dest="history_command", required=True)
+    hist_list_p = history_subparsers.add_parser("list")
+    hist_list_p.add_argument("--limit", type=int, default=20, help="Number of entries to show (default: 20)")
+    hist_show_p = history_subparsers.add_parser("show")
+    hist_show_p.add_argument("run_id", help="Run ID (or prefix) to inspect")
+
+    generate_parser = subparsers.add_parser("generate")
+    generate_subparsers = generate_parser.add_subparsers(dest="generate_command", required=True)
+    gen_scenarios_p = generate_subparsers.add_parser("scenarios")
+    gen_scenarios_p.add_argument("contract", nargs="?", default=CONTRACT_FILE_NAME, help="Path to contract JSON file")
+    gen_scenarios_p.add_argument("--output", default=None, help="Output JSON path (default: <contract_name>_scenarios.json)")
+    gen_scenarios_p.add_argument("--stub", default=None, metavar="PATH", help="Also write a Python test stub to PATH")
 
     config_parser = subparsers.add_parser("config")
     config_subparsers = config_parser.add_subparsers(dest="config_command", required=True)
@@ -94,11 +126,20 @@ def main(argv: list[str] | None = None) -> int:
             bless=args.command == "bless",
             fail_on_regression=fail_on_regression,
             filter_pattern=filter_pattern,
+            html_output=getattr(args, "html_output", None),
         )
     if args.command == "compare":
         return _compare_only()
     if args.command == "report":
-        return _report_only()
+        return _report_only(html_output=getattr(args, "html_output", None))
+    if args.command == "history":
+        if args.history_command == "list":
+            return _history_list(args.limit)
+        if args.history_command == "show":
+            return _history_show(args.run_id)
+    if args.command == "generate":
+        if args.generate_command == "scenarios":
+            return _generate_scenarios(args.contract, args.output, args.stub)
     if args.command == "config":
         if args.config_command == "init":
             return _config_init(args.output)
@@ -117,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     return EXIT_CONFIG_ERROR
 
 
-def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_pattern: str | None = None) -> int:
+def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_pattern: str | None = None, html_output: str | None = None) -> int:
     _load_tests(root)
     definitions = collect_registered_tests(filter_pattern)
     if not definitions:
@@ -142,29 +183,117 @@ def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_patt
     trace_path = TRACE_DIR / "latest.json"
     report_path = REPORT_DIR / "latest.json"
     markdown_report_path = REPORT_DIR / "latest.md"
+    html_report_path = REPORT_DIR / "latest.html"
     session.trace_file = str(trace_path)
     session.markdown_report_file = str(markdown_report_path)
     write_json(trace_path, trace_payload)
     write_json(report_path, session.to_dict())
     markdown = render_markdown_report(session)
     markdown_report_path.write_text(markdown, encoding="utf-8")
+    html_bytes = render_html_report(session.to_dict())
+    html_report_path.write_text(html_bytes, encoding="utf-8")
+    if html_output:
+        Path(html_output).parent.mkdir(parents=True, exist_ok=True)
+        Path(html_output).write_text(html_bytes, encoding="utf-8")
     summary_written = write_github_step_summary(markdown, os.environ.get("GITHUB_STEP_SUMMARY"))
     _print_session_summary(session)
     if summary_written:
         print(f"GitHub step summary: {os.environ['GITHUB_STEP_SUMMARY']}")
+    print(_kv("HTML", str(html_output or html_report_path)))
+
+    any_behavior_failures = any(report.failed_runs for report in reports)
+    any_regression = bool(comparison["regressions"])
+    record_run(
+        current_data,
+        session.suite_id,
+        any_regression,
+        filter_pattern=filter_pattern,
+    )
 
     if bless:
         baseline_path = save_baseline({"suite_id": session.suite_id, "reports": current_data}, session.suite_id)
         print(f"\nBaseline saved to {baseline_path}")
-
-    any_behavior_failures = any(report.failed_runs for report in reports)
-    any_regression = bool(comparison["regressions"])
     if comparison.get("suite_mismatch") and fail_on_regression:
         return EXIT_CONFIG_ERROR
     if fail_on_regression and any_regression:
         return EXIT_REGRESSION
     if any_behavior_failures:
         return EXIT_BEHAVIOR_FAILED
+    return EXIT_SUCCESS
+
+
+def _history_list(limit: int) -> int:
+    entries = get_history(limit)
+    if not entries:
+        print("No run history found. Run `agentcheck test` to start recording history.")
+        return EXIT_SUCCESS
+    print(_style(f"Run history ({len(entries)} most recent)", bold=True))
+    for entry in entries:
+        status_color = "yellow" if entry.has_regression else ("red" if entry.failed_tests else "green")
+        status_label = "REGRESSION" if entry.has_regression else ("FAIL" if entry.failed_tests else "PASS")
+        print(f"\n{_badge(status_label, color=status_color)} {entry.run_id}  {entry.created_at[:19].replace('T', ' ')}")
+        print(_kv("Tests", f"{entry.passed_tests}/{entry.total_tests} passed  ({entry.success_rate:.0f}%)"))
+        if entry.suite_id:
+            suite_short = entry.suite_id[-60:] if len(entry.suite_id) > 60 else entry.suite_id
+            print(_kv("Suite", suite_short))
+        if entry.filter_pattern:
+            print(_kv("Filter", entry.filter_pattern))
+    return EXIT_SUCCESS
+
+
+def _history_show(run_id: str) -> int:
+    entry = get_entry(run_id)
+    if entry is None:
+        print(f"No history entry found matching `{run_id}`.")
+        return EXIT_CONFIG_ERROR
+    status_color = "yellow" if entry.has_regression else ("red" if entry.failed_tests else "green")
+    status_label = "REGRESSION" if entry.has_regression else ("FAIL" if entry.failed_tests else "PASS")
+    print(f"{_badge(status_label, color=status_color)} Run {entry.run_id}")
+    print(_kv("Time", entry.created_at))
+    if entry.suite_id:
+        print(_kv("Suite", entry.suite_id))
+    print(_kv("Tests", f"{entry.passed_tests}/{entry.total_tests} passed"))
+    if entry.filter_pattern:
+        print(_kv("Filter", entry.filter_pattern))
+    print("")
+    for test in entry.tests:
+        t_color = "red" if test.get("failed_runs", 0) else "green"
+        t_label = "FAIL" if test.get("failed_runs", 0) else "PASS"
+        flaky = test.get("flakiness_score", 0)
+        flaky_str = f"  flaky={flaky:.2f}" if flaky > 0 else ""
+        print(f"  {_badge(t_label, color=t_color)} {test['name']}  {test.get('success_rate', 0):.0f}%  steps={test.get('average_steps', 0):.1f}{flaky_str}")
+    return EXIT_SUCCESS
+
+
+def _generate_scenarios(contract_path: str, output: str | None, stub_path: str | None) -> int:
+    path = Path(contract_path)
+    if not path.exists():
+        print(f"Contract file not found: {path}")
+        print(f"Create one with: agentcheck contract init")
+        return EXIT_CONFIG_ERROR
+    try:
+        contract = load_contract(path)
+    except Exception as exc:
+        print(f"{_badge('ERROR', color='red')} Failed to parse contract: {exc}")
+        return EXIT_CONFIG_ERROR
+
+    pack = generate_scenarios(contract)
+    out_path = Path(output) if output else Path(f"{contract.name}_scenarios.json")
+    save_scenario_pack(pack, out_path)
+
+    print(_style(f"Scenarios generated ({len(pack.scenarios)})", bold=True))
+    print(_kv("Contract", contract.name))
+    print(_kv("Output", str(out_path)))
+    for s in pack.scenarios:
+        print(f"  {_badge('SCENARIO', color='blue')} {s.name}  [{s.category}]")
+
+    if stub_path:
+        stub = render_scenario_stub(pack)
+        stub_out = Path(stub_path)
+        stub_out.parent.mkdir(parents=True, exist_ok=True)
+        stub_out.write_text(stub, encoding="utf-8")
+        print(_kv("Stub", stub_path))
+
     return EXIT_SUCCESS
 
 
@@ -320,13 +449,17 @@ def _compare_only() -> int:
     return EXIT_REGRESSION if comparison["regressions"] else EXIT_SUCCESS
 
 
-def _report_only() -> int:
+def _report_only(html_output: str | None = None) -> int:
     latest_report = REPORT_DIR / "latest.json"
     if not latest_report.exists():
         print("No report found. Run `agentcheck test` first.")
         return EXIT_CONFIG_ERROR
     report_data = read_json(latest_report)
     _print_session_summary_dict(report_data)
+    if html_output:
+        Path(html_output).parent.mkdir(parents=True, exist_ok=True)
+        Path(html_output).write_text(render_html_report(report_data), encoding="utf-8")
+        print(_kv("HTML", html_output))
     return EXIT_SUCCESS
 
 
