@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-from .baseline import delete_baseline, list_baselines, load_baseline, save_baseline
+from .baseline import delete_baseline, export_baseline, import_baseline, list_baselines, load_baseline, load_baseline_from_file, save_baseline
 from .compare import compare_reports
 from .config import CONFIG_FILE, AgentCheckConfig, _default_config, load_config, save_config
 from .contracts import CONTRACT_FILE as CONTRACT_FILE_NAME
@@ -58,6 +58,22 @@ def build_parser() -> argparse.ArgumentParser:
                 metavar="PATH",
                 help="Write an HTML report to PATH (e.g. report.html).",
             )
+            if command == "test":
+                subparser.add_argument(
+                    "--baseline",
+                    dest="baseline_path",
+                    default=None,
+                    metavar="PATH",
+                    help="Load baseline from a specific file instead of auto-detecting from .agentcheck/.",
+                )
+            if command == "bless":
+                subparser.add_argument(
+                    "--output",
+                    dest="bless_output",
+                    default=None,
+                    metavar="PATH",
+                    help="Also save the baseline to PATH (e.g. baselines/agent.json for git-committing).",
+                )
         if command == "report":
             subparser.add_argument(
                 "--html",
@@ -98,6 +114,12 @@ def build_parser() -> argparse.ArgumentParser:
     delete_parser.add_argument("path", help="Path to a baseline JSON file to delete")
     delete_parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
 
+    export_parser = baseline_subparsers.add_parser("export")
+    export_parser.add_argument("--output", required=True, metavar="PATH", help="Destination path (e.g. baselines/agent.json)")
+
+    import_parser = baseline_subparsers.add_parser("import")
+    import_parser.add_argument("path", help="Path to a baseline JSON file to import into .agentcheck/")
+
     contract_parser = subparsers.add_parser("contract")
     contract_subparsers = contract_parser.add_subparsers(dest="contract_command", required=True)
 
@@ -127,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
             fail_on_regression=fail_on_regression,
             filter_pattern=filter_pattern,
             html_output=getattr(args, "html_output", None),
+            baseline_path=getattr(args, "baseline_path", None),
+            bless_output=getattr(args, "bless_output", None),
         )
     if args.command == "compare":
         return _compare_only()
@@ -150,6 +174,10 @@ def main(argv: list[str] | None = None) -> int:
             return _baseline_inspect(args.path)
         if args.baseline_command == "delete":
             return _baseline_delete(args.path, confirmed=args.yes)
+        if args.baseline_command == "export":
+            return _baseline_export(args.output)
+        if args.baseline_command == "import":
+            return _baseline_import(args.path)
     if args.command == "contract":
         if args.contract_command == "init":
             return _contract_init(args.name, args.output)
@@ -158,7 +186,16 @@ def main(argv: list[str] | None = None) -> int:
     return EXIT_CONFIG_ERROR
 
 
-def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_pattern: str | None = None, html_output: str | None = None) -> int:
+def _run_tests(
+    root: Path,
+    *,
+    bless: bool,
+    fail_on_regression: bool,
+    filter_pattern: str | None = None,
+    html_output: str | None = None,
+    baseline_path: str | None = None,
+    bless_output: str | None = None,
+) -> int:
     _load_tests(root)
     definitions = collect_registered_tests(filter_pattern)
     if not definitions:
@@ -171,7 +208,14 @@ def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_patt
     reports, session, trace_payload = run_test_suite(definitions)
     session.suite_id = str(root.resolve())
     current_data = [report.to_dict() for report in reports]
-    baseline_data = load_baseline(session.suite_id)
+    if baseline_path:
+        bl_file = Path(baseline_path)
+        if not bl_file.exists():
+            print(f"Baseline file not found: {bl_file}")
+            return EXIT_CONFIG_ERROR
+        baseline_data = load_baseline_from_file(bl_file)
+    else:
+        baseline_data = load_baseline(session.suite_id)
     comparison = compare_reports(
         current_data,
         baseline_data["reports"] if baseline_data else None,
@@ -211,8 +255,14 @@ def _run_tests(root: Path, *, bless: bool, fail_on_regression: bool, filter_patt
     )
 
     if bless:
-        baseline_path = save_baseline({"suite_id": session.suite_id, "reports": current_data}, session.suite_id)
-        print(f"\nBaseline saved to {baseline_path}")
+        payload = {"suite_id": session.suite_id, "reports": current_data}
+        saved = save_baseline(payload, session.suite_id)
+        print(f"\nBaseline saved to {saved}")
+        if bless_output:
+            out = Path(bless_output)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            write_json(out, payload)
+            print(f"Baseline exported to {out}")
     if comparison.get("suite_mismatch") and fail_on_regression:
         return EXIT_CONFIG_ERROR
     if fail_on_regression and any_regression:
@@ -379,6 +429,32 @@ def _baseline_delete(path_str: str, *, confirmed: bool) -> int:
     delete_baseline(path)
     print(f"Deleted: {path}")
     return EXIT_SUCCESS
+
+
+def _baseline_export(output: str) -> int:
+    try:
+        dest = export_baseline(Path(output))
+        print(f"Baseline exported to {dest}")
+        print("Commit this file to share the baseline with your team.")
+        return EXIT_SUCCESS
+    except FileNotFoundError as exc:
+        print(str(exc))
+        return EXIT_CONFIG_ERROR
+
+
+def _baseline_import(path_str: str) -> int:
+    src = Path(path_str)
+    if not src.exists():
+        print(f"Baseline file not found: {src}")
+        return EXIT_CONFIG_ERROR
+    try:
+        dest = import_baseline(src)
+        print(f"Baseline imported from {src}")
+        print(f"Saved to {dest}")
+        return EXIT_SUCCESS
+    except (ValueError, Exception) as exc:
+        print(f"Failed to import baseline: {exc}")
+        return EXIT_CONFIG_ERROR
 
 
 def _contract_init(name: str, output: str | None) -> int:

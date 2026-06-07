@@ -74,3 +74,30 @@ def delete_baseline(path: Path) -> None:
     path.unlink(missing_ok=True)
     if BASELINE_FILE.exists() and BASELINE_FILE.resolve() == path.resolve():
         BASELINE_FILE.unlink(missing_ok=True)
+
+
+def load_baseline_from_file(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+    return read_json(path)
+
+
+def export_baseline(dest: Path) -> Path:
+    if not BASELINE_FILE.exists():
+        raise FileNotFoundError("No baseline found. Run `agentcheck bless` to create one.")
+    data = read_json(BASELINE_FILE)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    write_json(dest, data)
+    return dest
+
+
+def import_baseline(src: Path) -> Path:
+    data = read_json(src)
+    if "reports" not in data:
+        raise ValueError(f"Invalid baseline file: missing 'reports' key in {src}")
+    suite_id = data.get("suite_id")
+    if suite_id:
+        suite_path = suite_baseline_path(suite_id)
+        write_json(suite_path, data)
+    write_json(BASELINE_FILE, data)
+    return BASELINE_FILE

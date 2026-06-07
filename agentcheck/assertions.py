@@ -10,6 +10,7 @@ from .result import AgentResult
 FAILURE_CATEGORIES = {
     "missing_required_tool",
     "wrong_tool_order",
+    "wrong_tool_args",
     "step_budget_exceeded",
     "unsupported_success_claim",
     "runtime_error",
@@ -231,6 +232,28 @@ class Expectation:
             f"Tool `{tool_name}` completed successfully.",
             f"Expected tool `{tool_name}` to succeed, but it was not found among successful calls {successful or 'none'}.",
             category="tool_failure",
+        )
+
+    def tool_called_with_args(self, tool_name: str, expected_args: dict) -> "Expectation":
+        matching = [tc for tc in self.result.tool_calls if tc.name == tool_name]
+        if not matching:
+            return self._check(
+                "tool_called_with_args",
+                False,
+                "",
+                f"Expected tool `{tool_name}` to be called with args {expected_args!r}, but the tool was never called.",
+                category="missing_required_tool",
+            )
+        def _is_subset(actual: dict, expected: dict) -> bool:
+            return all(actual.get(k) == v for k, v in expected.items())
+        actual_args_list = [tc.args or {} for tc in matching]
+        passed = any(_is_subset(actual, expected_args) for actual in actual_args_list)
+        return self._check(
+            "tool_called_with_args",
+            passed,
+            f"Tool `{tool_name}` was called with expected args {expected_args!r}.",
+            f"Tool `{tool_name}` was called but not with {expected_args!r}. Actual args: {actual_args_list!r}.",
+            category="wrong_tool_args",
         )
 
 
