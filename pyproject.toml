@@ -33,9 +33,9 @@ crewai = ["crewai"]
 dev = ["pytest", "openai-agents", "langgraph", "langchain-core", "crewai"]
 
 [project.urls]
-Homepage = "https://github.com/ashutosh-rath02/pygent-test"
-Repository = "https://github.com/ashutosh-rath02/pygent-test"
-Issues = "https://github.com/ashutosh-rath02/pygent-test/issues"
+Homepage = "https://github.com/invarium-ai/invarium"
+Repository = "https://github.com/invarium-ai/invarium"
+Issues = "https://github.com/invarium-ai/invarium/issues"
 
 [project.scripts]
 agentcheck = "agentcheck.cli:main"

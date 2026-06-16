@@ -1,47 +1,80 @@
-# AgentCheck
+<div align="center">
 
-AgentCheck is pytest for AI agents. Test behavior, not exact text.
+<p align="center">
+  <img src="assets/invarium-logo.svg" alt="Invarium logo" width="84" height="84" />
+</p>
 
-- GitHub: `https://github.com/ashutosh-rath02/pygent-test/`
-- PyPI: `https://pypi.org/project/pygent-test/`
+<h1 align="center">Invarium</h1>
 
-## Install
+**Pytest for AI agents — test behavior, not exact text.**
+
+[![PyPI version](https://img.shields.io/pypi/v/pygent-test.svg)](https://pypi.org/project/pygent-test/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pygent-test.svg)](https://pypi.org/project/pygent-test/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PyPI downloads](https://img.shields.io/pypi/dm/pygent-test.svg)](https://pypi.org/project/pygent-test/)
+
+[Quickstart](#quickstart) · [Why Invarium](#why-invarium) · [Writing tests](#writing-a-test) · [CLI](#cli-commands) · [Docs](#documentation)
+
+</div>
+
+---
+
+Invarium brings the discipline of unit testing to AI agents. Instead of asserting
+on brittle, model-generated text, you assert on **observable behavior** — which tools
+an agent called, in what order, how many steps it took, and whether it claimed success
+without doing the work. It then tracks that behavior over time and flags regressions
+against a saved baseline.
+
+> **Note:** Invarium is distributed on PyPI as the `pygent-test` package and exposes the
+> `agentcheck` command-line tool. Use those names when installing and running it.
+
+## Why Invarium
+
+LLM-driven agents are non-deterministic: the same prompt can produce different wording,
+different tool paths, and different costs on every run. Traditional string-match tests
+break constantly, and pure eval scores tell you *that* something changed but not *what*.
+
+Invarium takes a different approach:
+
+- **Behavioral assertions** — verify tool usage, ordering, step budgets, and success
+  claims rather than exact output.
+- **Regression detection** — `bless` a baseline, then catch drift in success rate,
+  steps, latency, cost, and tool coverage automatically.
+- **Flakiness scoring** — run each test multiple times and surface unstable tool paths.
+- **Framework-agnostic** — works with OpenAI Agents, LangGraph, CrewAI, plain Python
+  callables, or any deployed HTTP endpoint.
+- **CI-native** — fail builds on regression and publish reports straight to GitHub
+  Actions step summaries.
+
+## Installation
 
 ```bash
 pip install pygent-test
 ```
 
-Optional framework extras:
+Optional framework adapters:
 
 ```bash
-pip install "pygent-test[openai]"
-pip install "pygent-test[langgraph]"
-pip install "pygent-test[crewai]"
+pip install "pygent-test[openai]"      # OpenAI Agents SDK
+pip install "pygent-test[langgraph]"   # LangGraph
+pip install "pygent-test[crewai]"      # CrewAI
 ```
 
-## Quickstart (5 minutes)
+Requires Python 3.10+.
+
+## Quickstart
 
 ```bash
 pip install -e .
-python -m agentcheck.cli test examples
-python -m agentcheck.cli bless examples
-python -m agentcheck.cli test regression_examples
+python -m agentcheck.cli test examples            # run example tests
+python -m agentcheck.cli bless examples           # save a baseline
+python -m agentcheck.cli test regression_examples # catch an intentional regression
 ```
 
-This shows a passing test, a baseline being saved, and an intentional regression caught with a clear behavior diff.
+This walks you through a passing test, a saved baseline, and a regression caught with a
+clear behavior diff — in about five minutes.
 
-## What It Tests
-
-AgentCheck checks observable agent behavior:
-
-- which tools were called, and how many times
-- whether tools ran in the expected order
-- whether the agent stayed within a step budget
-- whether the agent claimed success without tool evidence
-- whether any of the above regressed against a saved baseline
-- whether output matched or avoided specific content or patterns
-
-## Write a Test
+## Writing a Test
 
 ```python
 from agentcheck import agent_test, expect
@@ -58,6 +91,9 @@ def test_booking_agent(agent):
     check.verify()
     return result
 ```
+
+`runs=5` executes the test five times so Invarium can measure stability, not just a
+single lucky pass.
 
 ## Assertions
 
@@ -79,7 +115,7 @@ expect(result).final_output_matches_pattern(r"Order #\d+")
 expect(result).did_not_claim_confirmation_without_tool("booking_tool")
 ```
 
-Chain multiple checks with `collect=True` to get all failures at once:
+Use `collect=True` to gather every failure in one report instead of stopping at the first:
 
 ```python
 check = expect(result, collect=True)
@@ -88,58 +124,13 @@ check.steps_less_than(5)
 check.verify()
 ```
 
-## CLI Commands
+### Failure Categories
 
-```bash
-# Run tests
-agentcheck test [path] [-k filter_pattern] [--html report.html] [--fail-on-regression]
-
-# Save baseline
-agentcheck bless [path]
-
-# Re-compare last run against baseline
-agentcheck compare
-
-# Print last report
-agentcheck report [--html report.html]
-
-# Baseline management
-agentcheck baseline list
-agentcheck baseline inspect .agentcheck/baselines/latest.json
-agentcheck baseline delete .agentcheck/baselines/old.json --yes
-
-# Agent contracts
-agentcheck contract init my_agent
-agentcheck contract validate agent_contract.json
-
-# Scenario generation
-agentcheck generate scenarios agent_contract.json --stub tests/generated_tests.py
-
-# Config file
-agentcheck config init
-
-# Run history
-agentcheck history list
-agentcheck history show <run-id>
-```
-
-## HTML Report
-
-Every `agentcheck test` run automatically writes a self-contained HTML report to `.agentcheck/reports/latest.html`. Open it in any browser — no server needed.
-
-To write it to a custom path:
-
-```bash
-agentcheck test examples --html reports/run.html
-```
-
-## Failure Categories
-
-Every failed assertion is labeled with a category so you know exactly what type of failure occurred:
+Every failed assertion is tagged so you know exactly what broke:
 
 | Category | Triggered by |
 |---|---|
-| `missing_required_tool` | `used_tool`, `used_any_tool`, `used_tool_times`, etc. |
+| `missing_required_tool` | `used_tool`, `used_any_tool`, `used_tool_times`, … |
 | `wrong_tool_order` | `used_tools_in_order` |
 | `step_budget_exceeded` | `steps_less_than` |
 | `unsupported_success_claim` | `did_not_claim_confirmation_without_tool` |
@@ -147,52 +138,46 @@ Every failed assertion is labeled with a category so you know exactly what type 
 | `output_mismatch` | `final_output_contains`, `final_output_matches_pattern` |
 | `tool_failure` | `tool_succeeded` |
 
-## Flakiness Detection
-
-When a test runs multiple times and produces mixed results, AgentCheck computes a `flakiness_score` (0–1) and flags `unstable_tool_paths` when tool sequences vary between runs. Both appear in CLI output and the HTML/Markdown reports.
-
-## Agent Contracts
-
-Define expected agent behavior in a reusable file:
+## CLI Commands
 
 ```bash
-agentcheck contract init booking_agent
-```
+# Run tests
+agentcheck test [path] [-k filter] [--html report.html] [--fail-on-regression]
 
-This creates `agent_contract.json`:
+# Baselines
+agentcheck bless [path]                 # save current run as baseline
+agentcheck compare                      # re-compare last run against baseline
+agentcheck baseline list
+agentcheck baseline inspect .agentcheck/baselines/latest.json
+agentcheck baseline delete .agentcheck/baselines/old.json --yes
 
-```json
-{
-  "name": "booking_agent",
-  "expected_tools": ["search", "summarize"],
-  "required_tool_order": [],
-  "step_budget": 10,
-  "success_conditions": ["answer provided"],
-  "forbidden_claims": ["reservation complete"],
-  "scenario_tags": ["happy_path"]
-}
-```
+# Reports
+agentcheck report [--html report.html]
 
-Validate it:
-
-```bash
+# Contracts & scenario generation
+agentcheck contract init my_agent
 agentcheck contract validate agent_contract.json
+agentcheck generate scenarios agent_contract.json --stub tests/generated_tests.py
+
+# Config & history
+agentcheck config init
+agentcheck history list
+agentcheck history show <run-id>
 ```
 
-## Scenario Generation
+## Adapters
 
-Generate starter test scenarios from a contract:
+| Adapter | Install | Use with |
+|---|---|---|
+| `PythonAdapter` | built-in | any Python callable |
+| `OpenAIAgentsAdapter` | `pygent-test[openai]` | OpenAI Agents SDK |
+| `LangGraphAdapter` | `pygent-test[langgraph]` | LangGraph `StateGraph` |
+| `CrewAIAdapter` | `pygent-test[crewai]` | CrewAI Crew / Agent |
+| `HttpAdapter` | built-in | any HTTP endpoint |
 
-```bash
-agentcheck generate scenarios agent_contract.json --stub tests/generated.py
-```
+### Testing a Deployed Agent
 
-This writes a JSON scenario pack and a ready-to-edit Python test file covering:
-`happy_path`, `missing_information`, `ambiguous_request`, `tool_failure`, `over_step`, `unsupported_success`
-
-## HTTP Endpoint Testing
-
-Test a deployed agent without importing any local code:
+Test a live agent over HTTP without importing any local code:
 
 ```python
 from agentcheck import agent_test, expect, HttpAdapter
@@ -208,7 +193,7 @@ def test_deployed_agent():
     return expect(result).used_any_tool().finished_successfully().verify()
 ```
 
-Or fully environment-driven:
+Or drive it entirely from environment variables:
 
 ```python
 adapter = HttpAdapter.from_env(
@@ -217,9 +202,76 @@ adapter = HttpAdapter.from_env(
 )
 ```
 
-## Config File
+## Regression Detection
 
-Create `agentcheck.json` in your project root to set defaults:
+When a baseline exists, `agentcheck test` compares the current run and reports success
+rate change, step/latency/cost drift, tool coverage drops, primary tool path changes,
+and a failure-category breakdown.
+
+```bash
+agentcheck bless examples                          # save a baseline
+agentcheck test examples --fail-on-regression      # future runs compare automatically
+```
+
+## Flakiness Detection
+
+When a test runs multiple times and produces mixed results, Invarium computes a
+`flakiness_score` (0–1) and flags `unstable_tool_paths` when tool sequences vary between
+runs. Both appear in CLI output and in the HTML/Markdown reports.
+
+## Agent Contracts
+
+Define expected behavior once in a reusable file:
+
+```bash
+agentcheck contract init booking_agent
+```
+
+```json
+{
+  "name": "booking_agent",
+  "expected_tools": ["search", "summarize"],
+  "required_tool_order": [],
+  "step_budget": 10,
+  "success_conditions": ["answer provided"],
+  "forbidden_claims": ["reservation complete"],
+  "scenario_tags": ["happy_path"]
+}
+```
+
+```bash
+agentcheck contract validate agent_contract.json
+```
+
+### Scenario Generation
+
+Generate starter test scenarios from a contract:
+
+```bash
+agentcheck generate scenarios agent_contract.json --stub tests/generated.py
+```
+
+This writes a JSON scenario pack and a ready-to-edit Python test file covering
+`happy_path`, `missing_information`, `ambiguous_request`, `tool_failure`, `over_step`,
+and `unsupported_success`.
+
+## Reports & Artifacts
+
+Every `agentcheck test` run writes a self-contained HTML report to
+`.agentcheck/reports/latest.html` — open it in any browser, no server needed. Use
+`--html path` to write it elsewhere.
+
+| File | Contents |
+|---|---|
+| `.agentcheck/reports/latest.json` | Full session report (JSON) |
+| `.agentcheck/reports/latest.md` | Markdown report |
+| `.agentcheck/reports/latest.html` | Self-contained HTML report |
+| `.agentcheck/traces/latest.json` | Raw per-run traces |
+| `.agentcheck/history.json` | Append-only run log (capped at 200 entries) |
+
+## Configuration
+
+Create `agentcheck.json` in your project root to set defaults (CLI flags always win):
 
 ```bash
 agentcheck config init
@@ -233,93 +285,55 @@ agentcheck config init
 }
 ```
 
-CLI flags always override config file values.
-
-## Run History
-
-Every test run is automatically recorded locally:
-
-```bash
-agentcheck history list
-agentcheck history show abc123
-```
-
-History is stored at `.agentcheck/history.json` and capped at 200 entries.
-
-## Adapters
-
-| Adapter | Install | Usage |
-|---|---|---|
-| `PythonAdapter` | built-in | any Python callable |
-| `OpenAIAgentsAdapter` | `pygent-test[openai]` | OpenAI Agents SDK |
-| `LangGraphAdapter` | `pygent-test[langgraph]` | LangGraph `StateGraph` |
-| `CrewAIAdapter` | `pygent-test[crewai]` | CrewAI Crew / Agent |
-| `HttpAdapter` | built-in | any HTTP endpoint |
-
-## Regression Detection
-
-When a baseline exists, `agentcheck test` compares the current run and reports:
-
-- success rate change per test
-- step drift, latency drift, cost drift
-- tool coverage drops
-- primary tool path changes
-- failure category breakdown
-
-```bash
-# Save a baseline
-agentcheck bless examples
-
-# Future runs compare automatically
-agentcheck test examples --fail-on-regression
-```
-
-## Test Filtering
-
-Run a subset of tests by name:
-
-```bash
-agentcheck test -k booking
-agentcheck test -k "research or booking"
-```
-
 ## CI Integration
 
 ```yaml
-- name: Run AgentCheck
+- name: Run Invarium
   run: agentcheck test . --fail-on-regression --html reports/agentcheck.html
 
 - name: Upload report
   uses: actions/upload-artifact@v4
   with:
-    name: agentcheck-report
+    name: invarium-report
     path: reports/agentcheck.html
 ```
 
-The Markdown report is automatically written to the GitHub Actions step summary when `GITHUB_STEP_SUMMARY` is set.
+The Markdown report is automatically appended to the GitHub Actions step summary when
+`GITHUB_STEP_SUMMARY` is set.
 
-## pytest
+## pytest Integration
 
-AgentCheck tests also run through pytest:
+Invarium tests also run through pytest directly:
 
 ```bash
 pytest examples -q
 pytest tests -q
 ```
 
-## Artifacts Written Per Run
+Filter by name with `-k`:
 
-| File | Contents |
-|---|---|
-| `.agentcheck/reports/latest.json` | Full session report (JSON) |
-| `.agentcheck/reports/latest.md` | Markdown report |
-| `.agentcheck/reports/latest.html` | Self-contained HTML report |
-| `.agentcheck/traces/latest.json` | Raw per-run traces |
-| `.agentcheck/history.json` | Append-only run log |
+```bash
+agentcheck test -k booking
+agentcheck test -k "research or booking"
+```
 
 ## Documentation
 
-- [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) — architecture, adapters, assertions in depth
+- [TECHNICAL_GUIDE.md](TECHNICAL_GUIDE.md) — architecture, adapters, and assertions in depth
 - [ADAPTER_GUIDE.md](ADAPTER_GUIDE.md) — how to write a custom adapter
 - [REAL_WORLD_TESTING.md](REAL_WORLD_TESTING.md) — live OpenAI agent testing setup
-- [ROADMAP.md](ROADMAP.md) — what is done and where the project is going
+- [ROADMAP.md](ROADMAP.md) — what's done and where the project is going
+
+## Contributing
+
+Contributions are welcome. Please open an issue to discuss substantial changes before
+submitting a pull request, and run the test suite first:
+
+```bash
+pip install -e ".[dev]"
+pytest -q
+```
+
+## License
+
+Released under the [MIT License](LICENSE).
