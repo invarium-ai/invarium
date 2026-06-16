@@ -11,7 +11,8 @@
 [![PyPI version](https://img.shields.io/pypi/v/pygent-test.svg)](https://pypi.org/project/pygent-test/)
 [![Python versions](https://img.shields.io/pypi/pyversions/pygent-test.svg)](https://pypi.org/project/pygent-test/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![PyPI downloads](https://img.shields.io/pypi/dm/pygent-test.svg)](https://pypi.org/project/pygent-test/)
+[![Downloads](https://static.pepy.tech/badge/pygent-test/month)](https://pepy.tech/project/pygent-test)
+[![Total downloads](https://static.pepy.tech/badge/pygent-test)](https://pepy.tech/project/pygent-test)
 
 [Quickstart](#quickstart) · [Why Invarium](#why-invarium) · [Writing tests](#writing-a-test) · [CLI](#cli-commands) · [Docs](#documentation)
 
