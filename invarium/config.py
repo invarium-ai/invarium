@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 
-CONFIG_FILE = "agentcheck.json"
+CONFIG_FILE = "invarium.json"
 
 AdapterType = Literal["python", "openai_agents", "langgraph", "crewai", "http"]
 
@@ -19,7 +19,7 @@ _HTTP_FIELDS = {
 
 @dataclass
 class AdapterConfig:
-    """Adapter selection and options stored in agentcheck.json.
+    """Adapter selection and options stored in invarium.json.
 
     For code-based adapters (python, openai_agents, langgraph, crewai) only
     ``type`` is relevant — the agent object itself must be provided in test code.
@@ -86,11 +86,11 @@ class AdapterConfig:
         caller still needs to supply the agent object at run time.
         """
         if self.type == "http":
-            from agentcheck.adapters.http import HttpAdapter
+            from invarium.adapters.http import HttpAdapter
             if not self.url:
                 raise ValueError(
                     "adapter.url is required when adapter.type is 'http'. "
-                    "Set it in agentcheck.json or use HttpAdapter.from_env()."
+                    "Set it in invarium.json or use HttpAdapter.from_env()."
                 )
             return HttpAdapter(
                 self.url,
@@ -105,20 +105,20 @@ class AdapterConfig:
                 timeout=self.timeout,
             )
         if self.type == "openai_agents":
-            from agentcheck.adapters.openai_agents import OpenAIAgentsAdapter
+            from invarium.adapters.openai_agents import OpenAIAgentsAdapter
             return OpenAIAgentsAdapter()
         if self.type == "langgraph":
-            from agentcheck.adapters.langgraph import LangGraphAdapter
+            from invarium.adapters.langgraph import LangGraphAdapter
             return LangGraphAdapter()
         if self.type == "crewai":
-            from agentcheck.adapters.crewai import CrewAIAdapter
+            from invarium.adapters.crewai import CrewAIAdapter
             return CrewAIAdapter()
-        from agentcheck.adapters.python import PythonAdapter
+        from invarium.adapters.python import PythonAdapter
         return PythonAdapter()
 
 
 @dataclass
-class AgentCheckConfig:
+class InvariumConfig:
     runs: int | None = None
     path: str = "."
     fail_on_regression: bool = False
@@ -142,7 +142,7 @@ class AgentCheckConfig:
         return out
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AgentCheckConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "InvariumConfig":
         adapter: AdapterConfig | None = None
         if "adapter" in data and isinstance(data["adapter"], dict):
             adapter = AdapterConfig.from_dict(data["adapter"])
@@ -157,25 +157,25 @@ class AgentCheckConfig:
         )
 
 
-def load_config(root: Path | None = None) -> AgentCheckConfig:
+def load_config(root: Path | None = None) -> InvariumConfig:
     search_root = root or Path.cwd()
     candidate = search_root / CONFIG_FILE
     if not candidate.exists():
-        return AgentCheckConfig()
+        return InvariumConfig()
     try:
         data = json.loads(candidate.read_text(encoding="utf-8"))
-        return AgentCheckConfig.from_dict(data)
+        return InvariumConfig.from_dict(data)
     except Exception:
-        return AgentCheckConfig()
+        return InvariumConfig()
 
 
-def save_config(config: AgentCheckConfig, path: Path) -> None:
+def save_config(config: InvariumConfig, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
 
 
-def _default_config() -> AgentCheckConfig:
-    return AgentCheckConfig(
+def _default_config() -> InvariumConfig:
+    return InvariumConfig(
         runs=3,
         path=".",
         fail_on_regression=False,

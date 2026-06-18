@@ -27,7 +27,7 @@ def run_step(label: str, command: list[str], *, optional: bool = False) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run a quick smoke test for the installed AgentCheck package."
+        description="Run a quick smoke test for the installed Invarium package."
     )
     parser.add_argument(
         "--with-live",
@@ -40,11 +40,11 @@ def main() -> int:
 
     run_step(
         "Import package",
-        [python, "-c", "import agentcheck; print(agentcheck.__all__)"],
+        [python, "-c", "import invarium; print(invarium.__all__)"],
     )
     run_step(
         "CLI help",
-        [python, "-m", "agentcheck.cli", "--help"],
+        [python, "-m", "invarium.cli", "--help"],
     )
     if importlib.util.find_spec("pytest") is None:
         print("\n[SKIP] Unit tests skipped because `pytest` is not installed in this environment.")
@@ -55,22 +55,22 @@ def main() -> int:
         )
     run_step(
         "Passing demo",
-        [python, "-m", "agentcheck.cli", "test", "examples"],
+        [python, "-m", "invarium.cli", "test", "examples"],
     )
     if importlib.util.find_spec("langgraph") is None or importlib.util.find_spec("langchain_core") is None:
         print("\n[SKIP] LangGraph example skipped because `langgraph` or `langchain-core` is not installed.")
     else:
         run_step(
             "LangGraph example",
-            [python, "-m", "agentcheck.cli", "test", "framework_examples"],
+            [python, "-m", "invarium.cli", "test", "framework_examples"],
         )
     run_step(
         "Bless passing demo baseline",
-        [python, "-m", "agentcheck.cli", "bless", "examples"],
+        [python, "-m", "invarium.cli", "bless", "examples"],
     )
     run_step(
         "Broken behavior demo",
-        [python, "-m", "agentcheck.cli", "test", "regression_examples"],
+        [python, "-m", "invarium.cli", "test", "regression_examples"],
         optional=True,
     )
 
@@ -80,7 +80,7 @@ def main() -> int:
         else:
             run_step(
                 "Live OpenAI integration tests",
-                [python, "-m", "agentcheck.cli", "test", "integration_examples"],
+                [python, "-m", "invarium.cli", "test", "integration_examples"],
             )
 
     print("\nSmoke test completed.")

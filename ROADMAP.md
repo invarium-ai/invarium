@@ -1,10 +1,10 @@
-# AgentCheck Roadmap
+# Invarium Roadmap
 
 The goal is to make agent behavior testing simple, useful, and repeatable.
 
 ## Guiding Principle
 
-AgentCheck should help developers answer:
+Invarium should help developers answer:
 
 - did the agent behave correctly?
 - did that behavior regress?
@@ -58,38 +58,38 @@ Everything below is shipped and available in the current package.
 - shown in CLI output, Markdown report, and HTML report
 
 ### CLI commands
-- `agentcheck test [path] [-k filter] [--html out.html] [--fail-on-regression]`
-- `agentcheck bless [path]`
-- `agentcheck compare`
-- `agentcheck report [--html out.html]`
-- `agentcheck baseline list`
-- `agentcheck baseline inspect <path>`
-- `agentcheck baseline delete <path> [--yes]`
-- `agentcheck contract init [name] [--output]`
-- `agentcheck contract validate [path]`
-- `agentcheck generate scenarios <contract> [--output] [--stub]`
-- `agentcheck config init [--output]`
-- `agentcheck history list [--limit N]`
-- `agentcheck history show <run-id>`
+- `invarium test [path] [-k filter] [--html out.html] [--fail-on-regression]`
+- `invarium bless [path]`
+- `invarium compare`
+- `invarium report [--html out.html]`
+- `invarium baseline list`
+- `invarium baseline inspect <path>`
+- `invarium baseline delete <path> [--yes]`
+- `invarium contract init [name] [--output]`
+- `invarium contract validate [path]`
+- `invarium generate scenarios <contract> [--output] [--stub]`
+- `invarium config init [--output]`
+- `invarium history list [--limit N]`
+- `invarium history show <run-id>`
 
 ### Agent contracts
 - JSON contract schema: expected tools, required order, step budget, success conditions, forbidden claims, scenario tags
 - `validate_contract()` with field-level error messages
-- `agentcheck contract init` and `agentcheck contract validate`
+- `invarium contract init` and `invarium contract validate`
 
 ### Scenario generation
 - `generate_scenarios()` builds a scenario pack from a contract across 6 categories
 - `render_scenario_stub()` emits a ready-to-edit Python test file
-- `agentcheck generate scenarios`
+- `invarium generate scenarios`
 
 ### Config file
-- `agentcheck.json` at project root sets default runs, path, filter, fail-on-regression
-- `agentcheck config init` scaffolds the file
+- `invarium.json` at project root sets default runs, path, filter, fail-on-regression
+- `invarium config init` scaffolds the file
 
 ### Run history
-- append-only local history log at `.agentcheck/history.json`
-- auto-recorded after every `agentcheck test` run
-- `agentcheck history list` and `history show <run-id>` with prefix lookup
+- append-only local history log at `.invarium/history.json`
+- auto-recorded after every `invarium test` run
+- `invarium history list` and `history show <run-id>` with prefix lookup
 
 ### Adapters
 - plain Python adapter (`PythonAdapter`)
@@ -106,7 +106,7 @@ Everything below is shipped and available in the current package.
 
 ## Not Planned
 
-To stay focused, AgentCheck explicitly avoids:
+To stay focused, Invarium explicitly avoids:
 
 - building a dashboard-first product
 - fuzzy LLM-as-judge scoring

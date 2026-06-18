@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agentcheck import AgentResult, ToolCall
+from invarium import AgentResult, ToolCall
 
 
 @dataclass(slots=True)

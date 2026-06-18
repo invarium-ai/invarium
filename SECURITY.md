@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Security fixes are applied to the latest released version of `pygent-test` (Invarium).
+Security fixes are applied to the latest released version of `invarium` (Invarium).
 Please upgrade to the most recent release before reporting an issue.
 
 ## Reporting a Vulnerability

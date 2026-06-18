@@ -4,13 +4,13 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from agentcheck import AgentResult, ToolCall, expect
+from invarium import AgentResult, ToolCall, expect
 
 
 # ── HTML report ─────────────────────────────────────────────────────────────
 
 def test_html_report_is_valid_html():
-    from agentcheck.html_report import render_html_report
+    from invarium.html_report import render_html_report
     session = {
         "created_at": "2026-05-26T00:00:00Z",
         "suite_id": "examples",
@@ -54,7 +54,7 @@ def test_html_report_is_valid_html():
     }
     html = render_html_report(session)
     assert "<!doctype html>" in html.lower()
-    assert "AgentCheck Report" in html
+    assert "Invarium Report" in html
     assert "test_booking" in html
     assert "80.0%" in html
     assert "Regression" in html
@@ -63,7 +63,7 @@ def test_html_report_is_valid_html():
 
 
 def test_html_report_no_comparison():
-    from agentcheck.html_report import render_html_report
+    from invarium.html_report import render_html_report
     html = render_html_report({
         "created_at": "2026-05-26T00:00:00Z",
         "reports": [
@@ -87,8 +87,8 @@ def test_html_report_no_comparison():
 # ── Scenario generation ──────────────────────────────────────────────────────
 
 def test_generate_scenarios_from_contract():
-    from agentcheck.contracts import AgentContract
-    from agentcheck.scenarios import generate_scenarios
+    from invarium.contracts import AgentContract
+    from invarium.scenarios import generate_scenarios
 
     contract = AgentContract(
         name="booking_agent",
@@ -106,8 +106,8 @@ def test_generate_scenarios_from_contract():
 
 
 def test_scenario_happy_path_includes_all_expected_tools():
-    from agentcheck.contracts import AgentContract
-    from agentcheck.scenarios import generate_scenarios
+    from invarium.contracts import AgentContract
+    from invarium.scenarios import generate_scenarios
 
     contract = AgentContract(
         name="my_agent",
@@ -121,8 +121,8 @@ def test_scenario_happy_path_includes_all_expected_tools():
 
 
 def test_generate_scenario_stub_is_valid_python():
-    from agentcheck.contracts import AgentContract
-    from agentcheck.scenarios import generate_scenarios, render_scenario_stub
+    from invarium.contracts import AgentContract
+    from invarium.scenarios import generate_scenarios, render_scenario_stub
 
     contract = AgentContract(
         name="my_agent",
@@ -132,15 +132,15 @@ def test_generate_scenario_stub_is_valid_python():
     )
     pack = generate_scenarios(contract)
     stub = render_scenario_stub(pack)
-    assert "from agentcheck import" in stub
+    assert "from invarium import" in stub
     assert "@agent_test" in stub
     assert 'check.used_tool("search")' in stub
     assert "check.steps_less_than(4)" in stub
 
 
 def test_scenario_pack_round_trips_json():
-    from agentcheck.contracts import AgentContract
-    from agentcheck.scenarios import generate_scenarios, load_scenario_pack, save_scenario_pack
+    from invarium.contracts import AgentContract
+    from invarium.scenarios import generate_scenarios, load_scenario_pack, save_scenario_pack
 
     contract = AgentContract(
         name="trip_agent",
@@ -167,12 +167,12 @@ def _mock_http_response(body: bytes):
 
 
 def test_http_adapter_parses_success_response():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake-agent.test/run")
     body = b'{"output": "Task done", "tool_calls": [{"name": "search", "args": {}, "success": true}], "steps": 2}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("Find me a restaurant")
 
     assert result.final_output == "Task done"
@@ -184,12 +184,12 @@ def test_http_adapter_parses_success_response():
 
 
 def test_http_adapter_handles_http_error():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
     from urllib.error import HTTPError
 
     adapter = HttpAdapter("http://fake-agent.test/run")
-    with patch("agentcheck.adapters.http.urllib_request.urlopen",
+    with patch("invarium.adapters.http.urllib_request.urlopen",
                side_effect=HTTPError("url", 503, "Service Unavailable", {}, None)):
         result = adapter.run_input("query")
 
@@ -198,12 +198,12 @@ def test_http_adapter_handles_http_error():
 
 
 def test_http_adapter_handles_url_error():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
     from urllib.error import URLError
 
     adapter = HttpAdapter("http://unreachable.test/run")
-    with patch("agentcheck.adapters.http.urllib_request.urlopen",
+    with patch("invarium.adapters.http.urllib_request.urlopen",
                side_effect=URLError("Connection refused")):
         result = adapter.run_input("query")
 
@@ -213,11 +213,11 @@ def test_http_adapter_handles_url_error():
 
 
 def test_http_adapter_handles_json_parse_error():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake-agent.test/run")
-    with patch("agentcheck.adapters.http.urllib_request.urlopen",
+    with patch("invarium.adapters.http.urllib_request.urlopen",
                return_value=_mock_http_response(b"not valid json {")):
         result = adapter.run_input("query")
 
@@ -227,7 +227,7 @@ def test_http_adapter_handles_json_parse_error():
 
 
 def test_http_adapter_sets_auth_header(monkeypatch):
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
 
     monkeypatch.setenv("TEST_API_KEY", "secret-token-123")
     adapter = HttpAdapter("http://agent.test/run", auth_env_var="TEST_API_KEY")
@@ -235,7 +235,7 @@ def test_http_adapter_sets_auth_header(monkeypatch):
 
 
 def test_http_adapter_missing_auth_env_var_does_not_set_header(monkeypatch):
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
 
     monkeypatch.delenv("ABSENT_KEY", raising=False)
     adapter = HttpAdapter("http://agent.test/run", auth_env_var="ABSENT_KEY")
@@ -243,7 +243,7 @@ def test_http_adapter_missing_auth_env_var_does_not_set_header(monkeypatch):
 
 
 def test_http_adapter_request_body_uses_custom_key():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     import json
 
     adapter = HttpAdapter("http://fake.test/run", request_key="message")
@@ -253,7 +253,7 @@ def test_http_adapter_request_body_uses_custom_key():
 
 
 def test_http_adapter_request_extra_merged_into_body():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     import json
 
     adapter = HttpAdapter("http://fake.test/run", request_extra={"model": "gpt-4o", "temperature": 0})
@@ -265,12 +265,12 @@ def test_http_adapter_request_extra_merged_into_body():
 
 def test_http_adapter_parses_tool_key_alias():
     """'tool' key is accepted as alias for 'name'."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": [{"tool": "search", "arguments": {"q": "test"}, "ok": true}]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.tool_calls[0].name == "search"
@@ -280,12 +280,12 @@ def test_http_adapter_parses_tool_key_alias():
 
 def test_http_adapter_parses_input_key_alias():
     """'input' key is accepted as alias for 'args'."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": [{"name": "fetch", "input": {"url": "http://x"}}]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.tool_calls[0].args == {"url": "http://x"}
@@ -293,12 +293,12 @@ def test_http_adapter_parses_input_key_alias():
 
 def test_http_adapter_parses_result_key_alias():
     """'result' key is accepted as alias for 'output'."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": [{"name": "fetch", "result": "page content"}]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.tool_calls[0].output == "page content"
@@ -306,24 +306,24 @@ def test_http_adapter_parses_result_key_alias():
 
 def test_http_adapter_parses_string_tool_calls():
     """Tool calls array may contain plain strings (just tool names)."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": ["search", "book"]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert [t.name for t in result.tool_calls] == ["search", "book"]
 
 
 def test_http_adapter_empty_tool_calls_list():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": []}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.tool_calls == []
@@ -331,36 +331,36 @@ def test_http_adapter_empty_tool_calls_list():
 
 def test_http_adapter_tools_key_none_disables_parsing():
     """response_tools_key=None means tool_calls are never read from the response."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run", response_tools_key=None)
     body = b'{"output": "done", "tool_calls": [{"name": "search"}]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.tool_calls == []
 
 
 def test_http_adapter_uses_reported_latency_from_response():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "latency": 0.42}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.latency == pytest.approx(0.42)
 
 
 def test_http_adapter_uses_reported_cost_from_response():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "cost": 0.0015}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.cost == pytest.approx(0.0015)
@@ -368,43 +368,43 @@ def test_http_adapter_uses_reported_cost_from_response():
 
 def test_http_adapter_steps_fallback_to_tool_count():
     """When 'steps' key is absent, steps = len(tool_calls)."""
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run")
     body = b'{"output": "done", "tool_calls": [{"name": "a"}, {"name": "b"}]}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.steps == 2
 
 
 def test_http_adapter_custom_response_output_key():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://fake.test/run", response_output_key="answer")
     body = b'{"answer": "42", "output": "ignored"}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.final_output == "42"
 
 
 def test_http_adapter_metadata_contains_url():
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
     from unittest.mock import patch
 
     adapter = HttpAdapter("http://my-agent.test/run")
     body = b'{"output": "done"}'
-    with patch("agentcheck.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
+    with patch("invarium.adapters.http.urllib_request.urlopen", return_value=_mock_http_response(body)):
         result = adapter.run_input("query")
 
     assert result.metadata.get("http_url") == "http://my-agent.test/run"
 
 
 def test_http_adapter_from_env(monkeypatch):
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
 
     monkeypatch.setenv("MY_AGENT_URL", "http://agent.test/run")
     adapter = HttpAdapter.from_env(url_env_var="MY_AGENT_URL", auth_env_var=None)
@@ -412,7 +412,7 @@ def test_http_adapter_from_env(monkeypatch):
 
 
 def test_http_adapter_from_env_missing_url(monkeypatch):
-    from agentcheck.adapters.http import HttpAdapter
+    from invarium.adapters.http import HttpAdapter
 
     monkeypatch.delenv("MISSING_URL_VAR", raising=False)
     with pytest.raises(ValueError, match="MISSING_URL_VAR"):
@@ -422,7 +422,7 @@ def test_http_adapter_from_env_missing_url(monkeypatch):
 # ── CrewAI adapter ───────────────────────────────────────────────────────────
 
 def test_crewai_adapter_normalize_string_output():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("What is AI?", "AI stands for Artificial Intelligence.")
@@ -431,7 +431,7 @@ def test_crewai_adapter_normalize_string_output():
 
 
 def test_crewai_adapter_normalize_crew_result_object():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     class FakeCrew:
         raw = "Final answer here"
@@ -447,7 +447,7 @@ def test_crewai_adapter_normalize_crew_result_object():
 
 
 def test_crewai_adapter_normalize_dict_output():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", {"output": "result text"})
@@ -455,7 +455,7 @@ def test_crewai_adapter_normalize_dict_output():
 
 
 def test_crewai_adapter_normalize_unknown_type_falls_back_to_str():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", 42)
@@ -463,7 +463,7 @@ def test_crewai_adapter_normalize_unknown_type_falls_back_to_str():
 
 
 def test_crewai_adapter_extract_errors_list():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", {"errors": ["tool failed", "timeout"]})
@@ -472,7 +472,7 @@ def test_crewai_adapter_extract_errors_list():
 
 
 def test_crewai_adapter_extract_errors_string():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", {"error": "something went wrong"})
@@ -480,7 +480,7 @@ def test_crewai_adapter_extract_errors_string():
 
 
 def test_crewai_adapter_extract_cost_from_token_usage():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     class FakeUsage:
         total_cost = 0.0023
@@ -497,7 +497,7 @@ def test_crewai_adapter_extract_cost_from_token_usage():
 
 
 def test_crewai_adapter_no_cost_when_no_usage():
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", "plain answer")
@@ -506,7 +506,7 @@ def test_crewai_adapter_no_cost_when_no_usage():
 
 def test_crewai_adapter_tasks_output_dict_items():
     """tasks_output as a list of dicts — both success and error cases."""
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", {
@@ -525,7 +525,7 @@ def test_crewai_adapter_tasks_output_dict_items():
 
 def test_crewai_adapter_tasks_output_single_object():
     """tasks_output as a single non-list object is still wrapped into one ToolCall."""
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     adapter = CrewAIAdapter()
     result = adapter.normalize("q", {
@@ -540,7 +540,7 @@ def test_crewai_adapter_run_calls_kickoff(monkeypatch):
     """run() calls crew.kickoff() with all prompt aliases and returns normalized result."""
     import sys
     from unittest.mock import MagicMock
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     monkeypatch.setitem(sys.modules, "crewai", MagicMock())
 
@@ -561,7 +561,7 @@ def test_crewai_adapter_run_handles_kickoff_exception(monkeypatch):
     """Exceptions from kickoff() are caught and surfaced as errors on AgentResult."""
     import sys
     from unittest.mock import MagicMock
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     monkeypatch.setitem(sys.modules, "crewai", MagicMock())
 
@@ -580,7 +580,7 @@ def test_crewai_adapter_run_agent_calls_execute_task(monkeypatch):
     """run_agent() creates a Task and calls agent.execute_task()."""
     import sys
     from unittest.mock import MagicMock
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     fake_crewai = MagicMock()
     fake_task_instance = MagicMock()
@@ -601,7 +601,7 @@ def test_crewai_adapter_run_agent_handles_exception(monkeypatch):
     """Exceptions from execute_task() are caught and surfaced as errors."""
     import sys
     from unittest.mock import MagicMock
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     fake_crewai = MagicMock()
     fake_crewai.Task.return_value = MagicMock()
@@ -622,7 +622,7 @@ def test_crewai_adapter_import_guard_raises(monkeypatch):
     """ImportError is raised with a helpful message when crewai is not installed."""
     import sys
     from unittest.mock import MagicMock
-    from agentcheck.adapters.crewai import CrewAIAdapter
+    from invarium.adapters.crewai import CrewAIAdapter
 
     # sys.modules[key] = None causes 'import crewai' to raise ImportError
     monkeypatch.setitem(sys.modules, "crewai", None)
@@ -635,7 +635,7 @@ def test_crewai_adapter_import_guard_raises(monkeypatch):
 # ── Run history ──────────────────────────────────────────────────────────────
 
 def test_history_record_and_retrieve(monkeypatch):
-    from agentcheck import history as history_mod
+    from invarium import history as history_mod
     tmp_file = Path(".build-tmp") / f"history-{uuid4().hex}.json"
     monkeypatch.setattr(history_mod, "HISTORY_FILE", tmp_file)
 
@@ -656,7 +656,7 @@ def test_history_record_and_retrieve(monkeypatch):
 
 
 def test_history_prefix_lookup(monkeypatch):
-    from agentcheck import history as history_mod
+    from invarium import history as history_mod
     tmp_file = Path(".build-tmp") / f"history-{uuid4().hex}.json"
     monkeypatch.setattr(history_mod, "HISTORY_FILE", tmp_file)
 
@@ -668,7 +668,7 @@ def test_history_prefix_lookup(monkeypatch):
 
 
 def test_history_list_is_most_recent_first(monkeypatch):
-    from agentcheck import history as history_mod
+    from invarium import history as history_mod
     tmp_file = Path(".build-tmp") / f"history-{uuid4().hex}.json"
     monkeypatch.setattr(history_mod, "HISTORY_FILE", tmp_file)
 

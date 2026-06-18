@@ -195,7 +195,7 @@ def render_markdown_report(session_data: SessionReport | dict[str, Any]) -> str:
         data = session_data
 
     lines = [
-        "# AgentCheck Report",
+        "# Invarium Report",
         "",
         f"- Created at: `{data['created_at']}`",
     ]

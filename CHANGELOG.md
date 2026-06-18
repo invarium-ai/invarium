@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Changed
-- Rebranded to **Invarium** (published on PyPI as `pygent-test`, CLI `agentcheck`).
+- Rebranded to **Invarium** (published on PyPI as `invarium`, CLI `invarium`).
 - Refreshed README and contributor documentation.
 
 ### Added

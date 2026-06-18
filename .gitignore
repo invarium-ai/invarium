@@ -25,8 +25,8 @@ pip-wheel-metadata/
 .coverage.*
 htmlcov/
 
-# AgentCheck local artifacts
-.agentcheck/
+# Invarium local artifacts
+.invarium/
 
 # Temp files created by the manual test runner
 _tmp_*/

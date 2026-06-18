@@ -98,7 +98,7 @@ def generate_scenarios(contract: AgentContract) -> ScenarioPack:
 
 def render_scenario_stub(pack: ScenarioPack) -> str:
     lines = [
-        "from agentcheck import agent_test, expect",
+        "from invarium import agent_test, expect",
         "",
         f"# Scenarios generated from contract: {pack.contract_name}",
         "# Replace `run_my_agent(input)` with your actual agent call.",

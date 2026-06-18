@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 
-from agentcheck import OpenAIAgentsAdapter, agent_test, expect
+from invarium import OpenAIAgentsAdapter, agent_test, expect
 
 
 def _require_openai_key() -> str:
@@ -68,9 +68,9 @@ def build_research_agent():
     def search_docs(query: str) -> str:
         """Search a small internal docs corpus and return concise notes."""
         normalized = query.strip().lower()
-        if "agentcheck" in normalized:
+        if "invarium" in normalized:
             return (
-                "AgentCheck supports repeated runs, behavioral assertions, "
+                "Invarium supports repeated runs, behavioral assertions, "
                 "baseline comparison, CLI commands, and pytest integration."
             )
         if "openai agents" in normalized:
@@ -86,7 +86,7 @@ def build_research_agent():
         if "No matching notes found." in notes:
             return "I could not find enough material to summarize."
         return (
-            "AgentCheck focuses on behavioral testing with repeated runs, "
+            "Invarium focuses on behavioral testing with repeated runs, "
             "assertions, baselines, and pytest support."
         )
 
@@ -94,7 +94,7 @@ def build_research_agent():
         name="Research Assistant",
         instructions=(
             "You are a research assistant. "
-            "When the user asks about AgentCheck, first call `search_docs` once. "
+            "When the user asks about Invarium, first call `search_docs` once. "
             "Then call `summarize_notes` once using the notes from `search_docs`. "
             "Do not answer before both tools are called. Keep the final answer to one sentence."
         ),
@@ -104,14 +104,14 @@ def build_research_agent():
 
 @agent_test(runs=3, agent_factory=build_research_agent)
 def test_openai_research_agent(agent):
-    result = adapter.run(agent, "What does AgentCheck do?")
+    result = adapter.run(agent, "What does Invarium do?")
 
     check = expect(result, collect=True)
     check.used_tool("search_docs")
     check.used_tool("summarize_notes")
     check.used_tools_in_order(["search_docs", "summarize_notes"])
     check.steps_less_than(10)
-    check.final_output_contains("AgentCheck")
+    check.final_output_contains("Invarium")
     check.did_not_error()
     check.did_not_claim_confirmation_without_tool("summarize_notes")
     check.verify()

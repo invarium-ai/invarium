@@ -1,7 +1,7 @@
 # Contributing to Invarium
 
 Thanks for your interest in improving Invarium! This project is published on PyPI as
-[`pygent-test`](https://pypi.org/project/pygent-test/) and ships the `agentcheck` command-line
+[`invarium`](https://pypi.org/project/invarium/) and ships the `invarium` command-line
 tool. Contributions of all sizes are welcome — bug fixes, new adapters, assertions, examples,
 and documentation.
 
@@ -25,7 +25,7 @@ and documentation.
 4. **Try the CLI** against the bundled examples:
 
    ```bash
-   python -m agentcheck.cli test examples
+   python -m invarium.cli test examples
    ```
 
 ## Finding Something to Work On
@@ -53,10 +53,10 @@ approach and avoid duplicate effort.
 
 Adapters normalize a framework's run output into Invarium's `AgentResult` / `ToolCall` model.
 
-1. Copy [`agentcheck/adapters/template.py`](agentcheck/adapters/template.py) as a starting point.
-2. Lazy-import the framework SDK *inside* `run()` so importing `agentcheck.adapters` never
+1. Copy [`invarium/adapters/template.py`](invarium/adapters/template.py) as a starting point.
+2. Lazy-import the framework SDK *inside* `run()` so importing `invarium.adapters` never
    requires optional dependencies (see `openai_agents.py` for the pattern).
-3. Register the adapter in [`agentcheck/adapters/__init__.py`](agentcheck/adapters/__init__.py).
+3. Register the adapter in [`invarium/adapters/__init__.py`](invarium/adapters/__init__.py).
 4. Add an optional dependency extra in `pyproject.toml`.
 5. Add a unit test using a fake/mocked framework object.
 6. Add the adapter to the table in `README.md`.

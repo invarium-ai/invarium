@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from agentcheck import AgentResult, ToolCall, expect
-from agentcheck.baseline import load_baseline, save_baseline, suite_baseline_path
-from agentcheck.compare import compare_reports
-from agentcheck.report import (
+from invarium import AgentResult, ToolCall, expect
+from invarium.baseline import load_baseline, save_baseline, suite_baseline_path
+from invarium.compare import compare_reports
+from invarium.report import (
     TestRun as AgentTestRun,
     build_test_report,
     new_run_id,
@@ -17,10 +17,10 @@ from agentcheck.report import (
 
 def test_tool_count_assertions_pass_in_collected_mode():
     result = AgentResult(
-        input="Research AgentCheck",
+        input="Research Invarium",
         final_output="Done",
         tool_calls=[
-            ToolCall(name="search_docs", args={"query": "AgentCheck"}),
+            ToolCall(name="search_docs", args={"query": "Invarium"}),
             ToolCall(name="search_docs", args={"query": "pytest for agents"}),
             ToolCall(name="summarize_notes", args={"length": "short"}),
         ],
@@ -39,8 +39,8 @@ def test_markdown_report_render_includes_summary_and_failures():
         {
             "created_at": "2026-04-28T00:00:00Z",
             "suite_id": "framework_examples",
-            "trace_file": ".agentcheck/traces/latest.json",
-            "markdown_report_file": ".agentcheck/reports/latest.md",
+            "trace_file": ".invarium/traces/latest.json",
+            "markdown_report_file": ".invarium/reports/latest.md",
             "reports": [
                 {
                     "test_name": "test_booking_agent",
@@ -86,7 +86,7 @@ def test_markdown_report_render_includes_summary_and_failures():
         }
     )
 
-    assert "# AgentCheck Report" in markdown
+    assert "# Invarium Report" in markdown
     assert "- Suite: `framework_examples`" in markdown
     assert "## test_booking_agent" in markdown
     assert "### Failures" in markdown
@@ -268,9 +268,9 @@ def test_compare_reports_includes_behavior_deltas_for_regressions():
 
 def test_suite_baselines_are_isolated(monkeypatch):
     workspace_tmp = Path(".build-tmp") / f"baseline-test-{uuid4().hex}"
-    monkeypatch.setattr("agentcheck.storage.BASELINE_DIR", workspace_tmp)
-    monkeypatch.setattr("agentcheck.baseline.BASELINE_DIR", workspace_tmp)
-    monkeypatch.setattr("agentcheck.baseline.BASELINE_FILE", workspace_tmp / "latest.json")
+    monkeypatch.setattr("invarium.storage.BASELINE_DIR", workspace_tmp)
+    monkeypatch.setattr("invarium.baseline.BASELINE_DIR", workspace_tmp)
+    monkeypatch.setattr("invarium.baseline.BASELINE_FILE", workspace_tmp / "latest.json")
 
     first_suite = str(workspace_tmp / "examples")
     second_suite = str(workspace_tmp / "framework_examples")
@@ -290,7 +290,7 @@ def test_suite_baselines_are_isolated(monkeypatch):
 
 def test_write_github_step_summary_writes_markdown():
     summary_path = Path(".build-tmp") / f"step-summary-{uuid4().hex}.md"
-    markdown = "# AgentCheck Report\n"
+    markdown = "# Invarium Report\n"
 
     written = write_github_step_summary(markdown, str(summary_path))
 
@@ -369,8 +369,8 @@ def test_assertion_record_has_no_category_on_pass():
 
 
 def test_build_test_report_aggregates_failure_categories():
-    from agentcheck.assertions import AssertionRecord
-    from agentcheck.report import TestRun as AgentTestRun, build_test_report, new_run_id
+    from invarium.assertions import AssertionRecord
+    from invarium.report import TestRun as AgentTestRun, build_test_report, new_run_id
 
     failed_run = AgentTestRun(
         test_name="t",
@@ -442,7 +442,7 @@ def test_unstable_tool_paths_detected():
 # ── Contracts ───────────────────────────────────────────────────────────────
 
 def test_valid_contract_passes_validation():
-    from agentcheck.contracts import AgentContract, validate_contract
+    from invarium.contracts import AgentContract, validate_contract
     contract = AgentContract(
         name="search_agent",
         expected_tools=["search", "summarize"],
@@ -455,28 +455,28 @@ def test_valid_contract_passes_validation():
 
 
 def test_contract_validation_catches_empty_name():
-    from agentcheck.contracts import AgentContract, validate_contract
+    from invarium.contracts import AgentContract, validate_contract
     contract = AgentContract(name="")
     errors = validate_contract(contract)
     assert any(e.field == "name" for e in errors)
 
 
 def test_contract_validation_catches_invalid_step_budget():
-    from agentcheck.contracts import AgentContract, validate_contract
+    from invarium.contracts import AgentContract, validate_contract
     contract = AgentContract(name="my_agent", step_budget=0)
     errors = validate_contract(contract)
     assert any(e.field == "step_budget" for e in errors)
 
 
 def test_contract_validation_catches_unknown_scenario_tag():
-    from agentcheck.contracts import AgentContract, validate_contract
+    from invarium.contracts import AgentContract, validate_contract
     contract = AgentContract(name="my_agent", scenario_tags=["not_a_real_tag"])
     errors = validate_contract(contract)
     assert any(e.field == "scenario_tags" for e in errors)
 
 
 def test_contract_validation_catches_order_tool_not_in_expected():
-    from agentcheck.contracts import AgentContract, validate_contract
+    from invarium.contracts import AgentContract, validate_contract
     contract = AgentContract(
         name="my_agent",
         expected_tools=["search"],
@@ -487,7 +487,7 @@ def test_contract_validation_catches_order_tool_not_in_expected():
 
 
 def test_contract_round_trips_through_json():
-    from agentcheck.contracts import AgentContract, load_contract, save_contract
+    from invarium.contracts import AgentContract, load_contract, save_contract
     contract = AgentContract(
         name="my_agent",
         description="test",

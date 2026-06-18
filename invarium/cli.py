@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .baseline import delete_baseline, export_baseline, import_baseline, list_baselines, load_baseline, load_baseline_from_file, save_baseline
 from .compare import compare_reports
-from .config import CONFIG_FILE, AgentCheckConfig, _default_config, load_config, save_config
+from .config import CONFIG_FILE, InvariumConfig, _default_config, load_config, save_config
 from .contracts import CONTRACT_FILE as CONTRACT_FILE_NAME
 from .contracts import _default_contract, load_contract, save_contract, validate_contract
 from .discovery import collect_registered_tests, discover_test_files, import_test_file
@@ -36,7 +36,7 @@ ANSI_COLORS = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="agentcheck")
+    parser = argparse.ArgumentParser(prog="invarium")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     for command in ("test", "bless", "compare", "report"):
@@ -64,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
                     dest="baseline_path",
                     default=None,
                     metavar="PATH",
-                    help="Load baseline from a specific file instead of auto-detecting from .agentcheck/.",
+                    help="Load baseline from a specific file instead of auto-detecting from .invarium/.",
                 )
             if command == "bless":
                 subparser.add_argument(
@@ -118,7 +118,7 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--output", required=True, metavar="PATH", help="Destination path (e.g. baselines/agent.json)")
 
     import_parser = baseline_subparsers.add_parser("import")
-    import_parser.add_argument("path", help="Path to a baseline JSON file to import into .agentcheck/")
+    import_parser.add_argument("path", help="Path to a baseline JSON file to import into .invarium/")
 
     contract_parser = subparsers.add_parser("contract")
     contract_subparsers = contract_parser.add_subparsers(dest="contract_command", required=True)
@@ -200,9 +200,9 @@ def _run_tests(
     definitions = collect_registered_tests(filter_pattern)
     if not definitions:
         if filter_pattern:
-            print(f"No AgentCheck tests matched filter `{filter_pattern}`.")
+            print(f"No Invarium tests matched filter `{filter_pattern}`.")
         else:
-            print("No AgentCheck tests found.")
+            print("No Invarium tests found.")
         return EXIT_CONFIG_ERROR
 
     reports, session, trace_payload = run_test_suite(definitions)
@@ -275,7 +275,7 @@ def _run_tests(
 def _history_list(limit: int) -> int:
     entries = get_history(limit)
     if not entries:
-        print("No run history found. Run `agentcheck test` to start recording history.")
+        print("No run history found. Run `invarium test` to start recording history.")
         return EXIT_SUCCESS
     print(_style(f"Run history ({len(entries)} most recent)", bold=True))
     for entry in entries:
@@ -319,7 +319,7 @@ def _generate_scenarios(contract_path: str, output: str | None, stub_path: str |
     path = Path(contract_path)
     if not path.exists():
         print(f"Contract file not found: {path}")
-        print(f"Create one with: agentcheck contract init")
+        print(f"Create one with: invarium contract init")
         return EXIT_CONFIG_ERROR
     try:
         contract = load_contract(path)
@@ -367,7 +367,7 @@ def _config_init(output: str | None) -> int:
 def _baseline_list() -> int:
     entries = list_baselines()
     if not entries:
-        print("No baselines found. Run `agentcheck bless` to save one.")
+        print("No baselines found. Run `invarium bless` to save one.")
         return EXIT_SUCCESS
     print(_style(f"Baselines ({len(entries)})", bold=True))
     for entry in entries:
@@ -470,7 +470,7 @@ def _contract_init(name: str, output: str | None) -> int:
     print(_kv("Name", contract.name))
     print("")
     print("Edit the file to describe your agent's expected behavior.")
-    print(f"Then run: agentcheck contract validate {output_path}")
+    print(f"Then run: invarium contract validate {output_path}")
     return EXIT_SUCCESS
 
 
@@ -478,7 +478,7 @@ def _contract_validate(path: str) -> int:
     contract_path = Path(path)
     if not contract_path.exists():
         print(f"Contract file not found: {contract_path}")
-        print(f"Create one with: agentcheck contract init")
+        print(f"Create one with: invarium contract init")
         return EXIT_CONFIG_ERROR
     try:
         contract = load_contract(contract_path)
@@ -530,7 +530,7 @@ def _compare_only() -> int:
 def _report_only(html_output: str | None = None) -> int:
     latest_report = REPORT_DIR / "latest.json"
     if not latest_report.exists():
-        print("No report found. Run `agentcheck test` first.")
+        print("No report found. Run `invarium test` first.")
         return EXIT_CONFIG_ERROR
     report_data = read_json(latest_report)
     _print_session_summary_dict(report_data)
@@ -608,7 +608,7 @@ def _render_session_summary_dict(session_data: dict) -> str:
     reports = session_data.get("reports", [])
     comparison = session_data.get("baseline_comparison", {})
     regression_names = {item["test_name"] for item in comparison.get("regressions", [])}
-    lines = [_style("AgentCheck", bold=True)]
+    lines = [_style("Invarium", bold=True)]
 
     if session_data.get("suite_id"):
         lines.append(_kv("Suite", str(session_data["suite_id"])))

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from agentcheck.result import AgentResult
+from invarium.result import AgentResult
 
 
 class SupportsRun(Protocol):

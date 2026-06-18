@@ -58,10 +58,10 @@ create_issue() {
 
 create_issue \
 "Add a latency_less_than(ms) assertion" \
-'\`AgentResult\` already carries a \`latency\` field (\`agentcheck/result.py\`) and the failure taxonomy already defines a \`latency_exceeded\` category (\`agentcheck/assertions.py\`), but there is no assertion that uses them.
+'\`AgentResult\` already carries a \`latency\` field (\`invarium/result.py\`) and the failure taxonomy already defines a \`latency_exceeded\` category (\`invarium/assertions.py\`), but there is no assertion that uses them.
 
 ### Task
-Add an \`Expectation.latency_less_than(limit_ms: float)\` method in \`agentcheck/assertions.py\` that:
+Add an \`Expectation.latency_less_than(limit_ms: float)\` method in \`invarium/assertions.py\` that:
 - passes when \`result.latency\` is not None and \`< limit_ms\`
 - fails with category \`latency_exceeded\` otherwise (including when latency is None — message should make that clear)
 
@@ -78,7 +78,7 @@ create_issue \
 '\`AgentResult\` carries a \`cost\` field and the taxonomy defines a \`cost_exceeded\` category, but no assertion uses them.
 
 ### Task
-Add \`Expectation.cost_less_than(limit: float)\` in \`agentcheck/assertions.py\`:
+Add \`Expectation.cost_less_than(limit: float)\` in \`invarium/assertions.py\`:
 - passes when \`result.cost\` is not None and \`< limit\`
 - fails with category \`cost_exceeded\` otherwise
 
@@ -90,7 +90,7 @@ Add \`Expectation.cost_less_than(limit: float)\` in \`agentcheck/assertions.py\`
 
 create_issue \
 "Document the tool_called_with_args assertion in the README" \
-'The \`tool_called_with_args(tool_name, expected_args)\` assertion exists in \`agentcheck/assertions.py\` but is missing from the assertions list in \`README.md\`.
+'The \`tool_called_with_args(tool_name, expected_args)\` assertion exists in \`invarium/assertions.py\` but is missing from the assertions list in \`README.md\`.
 
 ### Task
 - [ ] Add it to the "Assertions" code block in \`README.md\`
@@ -102,7 +102,7 @@ No code changes required — documentation only. Great first PR.' \
 
 create_issue \
 "Support regex flags in final_output_matches_pattern" \
-'\`final_output_matches_pattern(pattern)\` in \`agentcheck/assertions.py\` calls \`re.search(pattern, ...)\` with no way to pass flags (e.g. case-insensitive matching).
+'\`final_output_matches_pattern(pattern)\` in \`invarium/assertions.py\` calls \`re.search(pattern, ...)\` with no way to pass flags (e.g. case-insensitive matching).
 
 ### Task
 Add an optional \`flags: int = 0\` parameter:
@@ -123,8 +123,8 @@ create_issue \
 
 ### Task
 - [ ] Add \`examples/langgraph_agent.py\` with a minimal LangGraph \`StateGraph\` agent
-- [ ] Add a behavioral test using \`LangGraphAdapter\` (\`agentcheck/adapters/langgraph.py\`)
-- [ ] Keep it runnable with \`pip install "pygent-test[langgraph]"\`
+- [ ] Add a behavioral test using \`LangGraphAdapter\` (\`invarium/adapters/langgraph.py\`)
+- [ ] Keep it runnable with \`pip install "invarium[langgraph]"\`
 
 See \`examples/booking_agent.py\` and \`examples/test_fake_booking_agent.py\` for the existing pattern.' \
 '["good first issue","documentation"]'
@@ -137,10 +137,10 @@ create_issue \
 Implement \`SmolagentsAdapter\` that normalizes a smolagents run into our \`AgentResult\` / \`ToolCall\` model.
 
 ### Pointers
-- Adapter base + contract: \`agentcheck/adapters/base.py\`
-- Skeleton to copy: \`agentcheck/adapters/template.py\`
-- Reference implementation: \`agentcheck/adapters/crewai.py\`
-- Wire it up in \`agentcheck/adapters/__init__.py\` and add an optional extra in \`pyproject.toml\`
+- Adapter base + contract: \`invarium/adapters/base.py\`
+- Skeleton to copy: \`invarium/adapters/template.py\`
+- Reference implementation: \`invarium/adapters/crewai.py\`
+- Wire it up in \`invarium/adapters/__init__.py\` and add an optional extra in \`pyproject.toml\`
 
 ### Acceptance criteria
 - [ ] Maps tool calls, steps, final output, and errors
@@ -156,9 +156,9 @@ create_issue \
 Implement \`AutoGenAdapter\` mapping an AutoGen run into \`AgentResult\` / \`ToolCall\`.
 
 ### Pointers
-- \`agentcheck/adapters/base.py\` (contract), \`agentcheck/adapters/template.py\` (skeleton)
-- Existing example to follow: \`agentcheck/adapters/openai_agents.py\`
-- Register in \`agentcheck/adapters/__init__.py\`; add a \`[autogen]\` extra in \`pyproject.toml\`
+- \`invarium/adapters/base.py\` (contract), \`invarium/adapters/template.py\` (skeleton)
+- Existing example to follow: \`invarium/adapters/openai_agents.py\`
+- Register in \`invarium/adapters/__init__.py\`; add a \`[autogen]\` extra in \`pyproject.toml\`
 
 ### Acceptance criteria
 - [ ] Tool calls + steps + final output normalized
@@ -174,8 +174,8 @@ create_issue \
 Implement \`PydanticAIAdapter\` that converts a Pydantic AI run result into \`AgentResult\` / \`ToolCall\`.
 
 ### Pointers
-- Contract: \`agentcheck/adapters/base.py\`; skeleton: \`agentcheck/adapters/template.py\`
-- Register in \`agentcheck/adapters/__init__.py\`; add a \`[pydantic-ai]\` extra in \`pyproject.toml\`
+- Contract: \`invarium/adapters/base.py\`; skeleton: \`invarium/adapters/template.py\`
+- Register in \`invarium/adapters/__init__.py\`; add a \`[pydantic-ai]\` extra in \`pyproject.toml\`
 
 ### Acceptance criteria
 - [ ] Normalizes tool calls, steps, final output, errors

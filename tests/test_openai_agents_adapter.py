@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agentcheck.adapters import OpenAIAgentsAdapter
+from invarium.adapters import OpenAIAgentsAdapter
 
 
 @dataclass
