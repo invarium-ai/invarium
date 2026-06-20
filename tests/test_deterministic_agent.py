@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentcheck import AgentResult, ToolCall, agent_test, expect
+from invarium import AgentResult, ToolCall, agent_test, expect
 
 
 @agent_test(runs=3)

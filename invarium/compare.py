@@ -81,7 +81,7 @@ def compare_reports(
                 "Baseline suite mismatch: "
                 f"current `{current_suite}` vs baseline `{baseline_suite}`. "
                 "Suite identities must match exactly. "
-                "Run `agentcheck bless <path>` for this suite."
+                "Run `invarium bless <path>` for this suite."
             ),
         }
 
@@ -104,7 +104,7 @@ def compare_reports(
                 "Baseline suite mismatch: "
                 f"current `{current_suite}` vs baseline `{baseline_suite}`. "
                 "The reports do not share any test names. "
-                "Run `agentcheck bless <path>` for this suite."
+                "Run `invarium bless <path>` for this suite."
             ),
         }
     regressions: list[dict[str, Any]] = []

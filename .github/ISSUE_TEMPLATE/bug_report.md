@@ -28,7 +28,7 @@ What actually happened (include the full error output / traceback if any).
 
 ## Environment
 
-- Invarium / `pygent-test` version:
+- Invarium / `invarium` version:
 - Python version:
 - OS:
 - Framework adapter in use (if any): OpenAI Agents / LangGraph / CrewAI / HTTP / Python

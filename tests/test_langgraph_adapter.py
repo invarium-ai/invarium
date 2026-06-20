@@ -10,7 +10,7 @@ pytest.importorskip("langgraph.graph")
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.graph import StateGraph, add_messages
 
-from agentcheck import LangGraphAdapter
+from invarium import LangGraphAdapter
 
 
 class GraphState(TypedDict):
@@ -21,36 +21,36 @@ def test_langgraph_adapter_normalizes_message_state_with_tool_calls():
     adapter = LangGraphAdapter()
     raw_result = {
         "messages": [
-            HumanMessage(content="What is AgentCheck?"),
+            HumanMessage(content="What is Invarium?"),
             AIMessage(
                 content="Let me search.",
                 tool_calls=[
                     {
                         "name": "search_docs",
-                        "args": {"query": "AgentCheck"},
+                        "args": {"query": "Invarium"},
                         "id": "call_1",
                         "type": "tool_call",
                     }
                 ],
             ),
             ToolMessage(
-                content="AgentCheck is a behavioral testing library.",
+                content="Invarium is a behavioral testing library.",
                 tool_call_id="call_1",
                 name="search_docs",
             ),
-            AIMessage(content="AgentCheck tests agent behavior."),
+            AIMessage(content="Invarium tests agent behavior."),
         ],
         "errors": [],
     }
 
-    result = adapter.normalize("What is AgentCheck?", raw_result)
+    result = adapter.normalize("What is Invarium?", raw_result)
 
-    assert result.final_output == "AgentCheck tests agent behavior."
+    assert result.final_output == "Invarium tests agent behavior."
     assert result.steps == 3
     assert len(result.tool_calls) == 1
     assert result.tool_calls[0].name == "search_docs"
-    assert result.tool_calls[0].args == {"query": "AgentCheck"}
-    assert result.tool_calls[0].output == "AgentCheck is a behavioral testing library."
+    assert result.tool_calls[0].args == {"query": "Invarium"}
+    assert result.tool_calls[0].output == "Invarium is a behavioral testing library."
     assert result.messages[0]["role"] == "user"
     assert result.messages[-1]["role"] == "assistant"
     assert result.metadata["adapter"] == "langgraph"
@@ -67,18 +67,18 @@ def test_langgraph_adapter_runs_real_compiled_graph():
                     tool_calls=[
                         {
                             "name": "search_docs",
-                            "args": {"query": "AgentCheck"},
+                            "args": {"query": "Invarium"},
                             "id": "call_1",
                             "type": "tool_call",
                         }
                     ],
                 ),
                 ToolMessage(
-                    content="AgentCheck is a behavioral testing library.",
+                    content="Invarium is a behavioral testing library.",
                     tool_call_id="call_1",
                     name="search_docs",
                 ),
-                AIMessage(content="AgentCheck tests agent behavior."),
+                AIMessage(content="Invarium tests agent behavior."),
             ]
         }
 
@@ -88,8 +88,8 @@ def test_langgraph_adapter_runs_real_compiled_graph():
     builder.set_finish_point("respond")
     graph = builder.compile()
 
-    result = adapter.run(graph, "What is AgentCheck?")
+    result = adapter.run(graph, "What is Invarium?")
 
-    assert result.final_output == "AgentCheck tests agent behavior."
+    assert result.final_output == "Invarium tests agent behavior."
     assert [tool.name for tool in result.tool_calls] == ["search_docs"]
     assert result.steps == 3

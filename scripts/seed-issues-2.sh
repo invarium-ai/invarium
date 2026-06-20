@@ -57,29 +57,29 @@ create_issue() {
 }
 
 create_issue \
-"Add an agentcheck --version flag" \
-'The CLI (\`agentcheck\`, defined in \`agentcheck/cli.py\`) has no way to print the installed version.
+"Add an invarium --version flag" \
+'The CLI (\`invarium\`, defined in \`invarium/cli.py\`) has no way to print the installed version.
 
 ### Task
-Add a top-level \`--version\` flag that prints the installed \`pygent-test\` version and exits, e.g.:
+Add a top-level \`--version\` flag that prints the installed \`invarium\` version and exits, e.g.:
 \`\`\`
-$ agentcheck --version
-agentcheck 0.3.1
+$ invarium --version
+invarium 0.3.1
 \`\`\`
 
 ### Hints
-- Read the version with \`importlib.metadata.version("pygent-test")\`.
+- Read the version with \`importlib.metadata.version("invarium")\`.
 - If you use argparse, \`action="version"\` is the simplest wiring.
 
 ### Acceptance criteria
-- [ ] \`agentcheck --version\` prints the version and exits 0
+- [ ] \`invarium --version\` prints the version and exits 0
 - [ ] A short note in the README CLI section
 - [ ] A unit test under \`tests/\`' \
 '["good first issue","enhancement"]'
 
 create_issue \
 "Use a forbidden_tool_used failure category for did_not_use_tool" \
-'\`did_not_use_tool(name)\` in \`agentcheck/assertions.py\` fails with category \`missing_required_tool\`, but the failure is the opposite: a tool that should have been avoided **was** used. The category is misleading in reports.
+'\`did_not_use_tool(name)\` in \`invarium/assertions.py\` fails with category \`missing_required_tool\`, but the failure is the opposite: a tool that should have been avoided **was** used. The category is misleading in reports.
 
 ### Task
 - Add a \`forbidden_tool_used\` entry to \`FAILURE_CATEGORIES\`.
@@ -94,7 +94,7 @@ create_issue \
 
 create_issue \
 "Support async agent callables in PythonAdapter" \
-'\`PythonAdapter\` (\`agentcheck/adapters/python.py\`) only supports synchronous callables. Many agents expose an async \`run\`/\`__call__\`.
+'\`PythonAdapter\` (\`invarium/adapters/python.py\`) only supports synchronous callables. Many agents expose an async \`run\`/\`__call__\`.
 
 ### Task
 Detect coroutine functions / awaitables and run them to completion (e.g. via \`asyncio.run\` / an event loop) so async agents work without a wrapper.
@@ -127,10 +127,10 @@ create_issue \
 
 ### Task
 - Add a mypy configuration (start lenient, then tighten).
-- Add a dev dependency and a CI step running \`mypy agentcheck\`.
+- Add a dev dependency and a CI step running \`mypy invarium\`.
 
 ### Acceptance criteria
-- [ ] mypy runs clean on \`agentcheck/\` (with a documented baseline config)
+- [ ] mypy runs clean on \`invarium/\` (with a documented baseline config)
 - [ ] CI runs mypy on push and PR
 - [ ] CONTRIBUTING.md notes how to run it' \
 '["help wanted"]'
@@ -154,7 +154,7 @@ create_issue \
 ### Task
 - Add \`examples/crewai_agent.py\` + a test using \`CrewAIAdapter\`.
 - Add \`examples/openai_agents_agent.py\` + a test using \`OpenAIAgentsAdapter\`.
-- Keep each runnable with the matching extra (\`pygent-test[crewai]\` / \`pygent-test[openai]\`).
+- Keep each runnable with the matching extra (\`invarium[crewai]\` / \`invarium[openai]\`).
 
 Follow the pattern in \`examples/booking_agent.py\` and \`examples/test_fake_booking_agent.py\`.
 

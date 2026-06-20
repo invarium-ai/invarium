@@ -12,14 +12,14 @@ def discover_test_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for pattern in patterns:
         files.extend(root.rglob(pattern))
-    return sorted({path for path in files if ".agentcheck" not in path.parts})
+    return sorted({path for path in files if ".invarium" not in path.parts})
 
 
 def import_test_file(path: Path) -> None:
     project_root = str(Path.cwd())
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
-    module_name = "_agentcheck_" + "_".join(path.with_suffix("").parts)
+    module_name = "_invarium_" + "_".join(path.with_suffix("").parts)
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Could not import test module from {path}.")

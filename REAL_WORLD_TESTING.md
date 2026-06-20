@@ -1,6 +1,6 @@
 # Real-World Testing
 
-AgentCheck is ready to test real agents, not just the included demo.
+Invarium is ready to test real agents, not just the included demo.
 
 ## Best First Target
 
@@ -14,7 +14,7 @@ Why this is the best first target:
 
 - It is maintained by OpenAI.
 - It has a simple Python API.
-- Tool use is explicit, which fits AgentCheck well.
+- Tool use is explicit, which fits Invarium well.
 - The public repo includes examples such as `examples/basic`, `examples/tools`, and `examples/research_bot`.
 
 ## Install
@@ -40,7 +40,7 @@ python -c "import os; print(bool(os.environ.get('OPENAI_API_KEY')))"
 ```python
 from agents import Agent, function_tool
 
-from agentcheck import OpenAIAgentsAdapter, agent_test, expect
+from invarium import OpenAIAgentsAdapter, agent_test, expect
 
 
 @function_tool
@@ -75,7 +75,7 @@ def test_weather_agent(agent: Agent):
 Run it with either:
 
 ```bash
-agentcheck test .
+invarium test .
 ```
 
 or:
@@ -95,7 +95,7 @@ python -m pytest integration_examples -q
 or:
 
 ```bash
-python -m agentcheck.cli test integration_examples
+python -m invarium.cli test integration_examples
 ```
 
 File:

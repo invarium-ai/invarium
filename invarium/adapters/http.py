@@ -7,7 +7,7 @@ from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 import json
 
-from agentcheck.result import AgentResult, ToolCall
+from invarium.result import AgentResult, ToolCall
 
 
 class HttpAdapter:
@@ -75,8 +75,8 @@ class HttpAdapter:
     def from_env(
         cls,
         *,
-        url_env_var: str = "AGENTCHECK_HTTP_URL",
-        auth_env_var: str | None = "AGENTCHECK_HTTP_TOKEN",
+        url_env_var: str = "INVARIUM_HTTP_URL",
+        auth_env_var: str | None = "INVARIUM_HTTP_TOKEN",
         **kwargs: Any,
     ) -> "HttpAdapter":
         url = os.environ.get(url_env_var, "")

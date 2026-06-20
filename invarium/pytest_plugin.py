@@ -10,11 +10,11 @@ from .testing import AgentTestDefinition
 
 
 @dataclass(slots=True)
-class AgentCheckRunResult:
+class InvariumRunResult:
     report_text: str
 
 
-class AgentCheckItem(pytest.Item):
+class InvariumItem(pytest.Item):
     def __init__(self, *, definition: AgentTestDefinition, **kwargs):
         super().__init__(**kwargs)
         self.definition = definition
@@ -31,18 +31,18 @@ class AgentCheckItem(pytest.Item):
         return super().repr_failure(excinfo, style=style)
 
     def reportinfo(self):
-        return self.path, 0, f"agentcheck: {self.definition.name}"
+        return self.path, 0, f"invarium: {self.definition.name}"
 
 
-class AgentCheckFile(pytest.Module):
+class InvariumFile(pytest.Module):
     def collect(self):
         module = self._getobj()
         for name in dir(module):
             obj = getattr(module, name)
-            definition = getattr(obj, "__agentcheck_test__", None)
+            definition = getattr(obj, "__invarium_test__", None)
             if definition is None:
                 continue
-            yield AgentCheckItem.from_parent(
+            yield InvariumItem.from_parent(
                 self,
                 name=definition.name,
                 definition=definition,
@@ -54,12 +54,12 @@ def pytest_collect_file(file_path, parent):  # noqa: ANN001
         return None
     if not (file_path.name.startswith("test_") or file_path.name.endswith("_test.py")):
         return None
-    return AgentCheckFile.from_parent(parent, path=file_path)
+    return InvariumFile.from_parent(parent, path=file_path)
 
 
 def _format_failure_report(report) -> str:  # noqa: ANN001
     lines = [
-        f"AgentCheck failed: {report.test_name}",
+        f"Invarium failed: {report.test_name}",
         f"Runs: {report.total_runs}",
         f"Passed: {report.passed_runs}",
         f"Failed: {report.failed_runs}",

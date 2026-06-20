@@ -1,6 +1,6 @@
-# AgentCheck Adapter Guide
+# Invarium Adapter Guide
 
-This guide explains how adapters should be structured in AgentCheck.
+This guide explains how adapters should be structured in Invarium.
 
 ## Why Adapters Exist
 
@@ -19,7 +19,7 @@ Others only give you:
 - a final response
 - maybe a tool trace
 
-AgentCheck uses adapters to normalize those differences into one shared model:
+Invarium uses adapters to normalize those differences into one shared model:
 
 - `AgentResult`
 - `ToolCall`
@@ -31,7 +31,7 @@ That is what allows the same assertions to work across different frameworks.
 All adapters should live in:
 
 ```text
-agentcheck/adapters/
+invarium/adapters/
 ```
 
 Current files:
@@ -142,7 +142,7 @@ Normalize them into `result.errors` as human-readable strings where possible.
 
 Start from:
 
-- [agentcheck/adapters/template.py](/c:/Users/AshutoshRath/OneDrive%20-%20Zimplistic.com/Desktop/pygent/agentcheck/adapters/template.py:1)
+- [invarium/adapters/template.py](invarium/adapters/template.py)
 
 Basic pattern:
 

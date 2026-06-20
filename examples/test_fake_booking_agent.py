@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from agentcheck import agent_test, expect
+from invarium import agent_test, expect
 
 from examples.booking_agent import SimpleBookingAgent
 

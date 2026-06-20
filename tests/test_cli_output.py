@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from agentcheck.cli import _render_comparison, _render_session_summary_dict
+from invarium.cli import _render_comparison, _render_session_summary_dict
 
 
 def test_render_session_summary_dict_shows_minimal_structured_output():
     rendered = _render_session_summary_dict(
         {
             "suite_id": "examples",
-            "trace_file": ".agentcheck/traces/latest.json",
-            "markdown_report_file": ".agentcheck/reports/latest.md",
+            "trace_file": ".invarium/traces/latest.json",
+            "markdown_report_file": ".invarium/reports/latest.md",
             "reports": [
                 {
                     "test_name": "test_booking_agent",
@@ -42,10 +42,10 @@ def test_render_session_summary_dict_shows_minimal_structured_output():
         }
     )
 
-    assert "AgentCheck" in rendered
+    assert "Invarium" in rendered
     assert "Suite        examples" in rendered
-    assert "Trace        .agentcheck/traces/latest.json" in rendered
-    assert "Markdown     .agentcheck/reports/latest.md" in rendered
+    assert "Trace        .invarium/traces/latest.json" in rendered
+    assert "Markdown     .invarium/reports/latest.md" in rendered
     assert "[PASS] test_booking_agent" in rendered
     assert "Runs         5" in rendered
     assert "Success      100.0%" in rendered

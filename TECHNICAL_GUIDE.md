@@ -1,29 +1,29 @@
-# AgentCheck Technical Guide
+# Invarium Technical Guide
 
-This guide explains how AgentCheck works, how to write tests with it, and how to extend it.
+This guide explains how Invarium works, how to write tests with it, and how to extend it.
 
 Project links:
 
-- GitHub: `https://github.com/ashutosh-rath02/pygent-test/`
-- PyPI: `https://pypi.org/project/pygent-test/`
+- GitHub: `https://github.com/invarium-ai/invarium/`
+- PyPI: `https://pypi.org/project/invarium/`
 
 ## Who This Is For
 
 This document is for developers who want to:
 
-- use AgentCheck on their own agents
+- use Invarium on their own agents
 - understand the test model
 - understand how assertions work
 - understand how adapters normalize traces
-- extend AgentCheck with new adapters or assertions
+- extend Invarium with new adapters or assertions
 
 ## Core Idea
 
-AgentCheck is built around one simple idea:
+Invarium is built around one simple idea:
 
 > An agent should be tested on behavior, not exact text.
 
-That means AgentCheck focuses on observable things such as:
+That means Invarium focuses on observable things such as:
 
 - tool usage
 - tool order
@@ -34,13 +34,13 @@ That means AgentCheck focuses on observable things such as:
 
 ## Mental Model
 
-An AgentCheck run has these layers:
+An Invarium run has these layers:
 
 1. A test function defines the expected behavior.
 2. The agent executes one or more times.
 3. Each run is normalized into an `AgentResult`.
 4. Assertions inspect the `AgentResult`.
-5. AgentCheck aggregates results across repeated runs.
+5. Invarium aggregates results across repeated runs.
 6. Reports and traces are written locally.
 7. Current results can be compared against a baseline.
 
@@ -48,7 +48,7 @@ An AgentCheck run has these layers:
 
 ```mermaid
 flowchart TD
-    A[Developer writes an agent test] --> B[AgentCheck runs the agent N times]
+    A[Developer writes an agent test] --> B[Invarium runs the agent N times]
     B --> C[Adapter normalizes each run into AgentResult]
     C --> D[Assertions inspect AgentResult]
     D --> E[Run-level pass or fail]
@@ -65,26 +65,26 @@ flowchart TD
 Current published package:
 
 ```bash
-pip install pygent-test
+pip install invarium
 ```
 
 Optional framework extras:
 
 ```bash
-pip install "pygent-test[langgraph]"
-pip install "pygent-test[openai]"
+pip install "invarium[langgraph]"
+pip install "invarium[openai]"
 ```
 
 Import name:
 
 ```python
-import agentcheck
+import invarium
 ```
 
 CLI:
 
 ```bash
-agentcheck test examples
+invarium test examples
 ```
 
 ## Basic Usage
@@ -92,7 +92,7 @@ agentcheck test examples
 ### Plain Python Agent Example
 
 ```python
-from agentcheck import agent_test, expect
+from invarium import agent_test, expect
 
 
 class MyAgent:
@@ -120,7 +120,7 @@ def test_my_agent(agent: MyAgent):
 Run it:
 
 ```bash
-python -m agentcheck.cli test .
+python -m invarium.cli test .
 ```
 
 ## Test Model
@@ -334,7 +334,7 @@ Use it when:
 
 - a specific concept or phrase must be present
 
-Keep this lightweight. AgentCheck is not meant to become an exact string comparison framework.
+Keep this lightweight. Invarium is not meant to become an exact string comparison framework.
 
 #### `final_output_does_not_contain(text)`
 
@@ -356,7 +356,7 @@ Use it for:
 - confirmations
 - any action where the agent should not claim completion without proof
 
-If `required_tool` is provided, AgentCheck looks for that tool specifically.
+If `required_tool` is provided, Invarium looks for that tool specifically.
 
 Example:
 
@@ -398,23 +398,23 @@ check.verify()
 
 ### CLI
 
-AgentCheck currently exposes:
+Invarium currently exposes:
 
 ```bash
-python -m agentcheck.cli test <path>
-python -m agentcheck.cli bless <path>
-python -m agentcheck.cli compare
-python -m agentcheck.cli report
+python -m invarium.cli test <path>
+python -m invarium.cli bless <path>
+python -m invarium.cli compare
+python -m invarium.cli report
 ```
 
 ### `test`
 
-Runs discovered AgentCheck tests.
+Runs discovered Invarium tests.
 
 Example:
 
 ```bash
-python -m agentcheck.cli test examples
+python -m invarium.cli test examples
 ```
 
 ### `bless`
@@ -424,7 +424,7 @@ Stores the current results as the baseline.
 Example:
 
 ```bash
-python -m agentcheck.cli bless examples
+python -m invarium.cli bless examples
 ```
 
 ### `compare`
@@ -434,7 +434,7 @@ Compares the latest report to the saved baseline.
 Example:
 
 ```bash
-python -m agentcheck.cli compare
+python -m invarium.cli compare
 ```
 
 ### `report`
@@ -444,26 +444,26 @@ Prints the latest saved report summary.
 Example:
 
 ```bash
-python -m agentcheck.cli report
+python -m invarium.cli report
 ```
 
-In addition to console output, AgentCheck now writes:
+In addition to console output, Invarium now writes:
 
-- `.agentcheck/reports/latest.json`
-- `.agentcheck/reports/latest.md`
+- `.invarium/reports/latest.json`
+- `.invarium/reports/latest.md`
 
 ## Baselines and Regression Detection
 
-AgentCheck stores local run artifacts under:
+Invarium stores local run artifacts under:
 
 ```text
-.agentcheck/
+.invarium/
   baselines/
   traces/
   reports/
 ```
 
-Each blessed suite is stored as its own JSON file under `.agentcheck/baselines/`.
+Each blessed suite is stored as its own JSON file under `.invarium/baselines/`.
 
 Typical workflow:
 
@@ -476,15 +476,15 @@ Typical workflow:
 Example:
 
 ```bash
-python -m agentcheck.cli bless integration_examples
-python -m agentcheck.cli test integration_examples --fail-on-regression
+python -m invarium.cli bless integration_examples
+python -m invarium.cli test integration_examples --fail-on-regression
 ```
 
 What regression currently means:
 
 - success rate dropped compared with the baseline for the same test name
 
-AgentCheck also guards against unrelated suites. If the current suite and saved
+Invarium also guards against unrelated suites. If the current suite and saved
 baseline suite do not match exactly, it warns about the mismatch instead of
 pretending the comparison is valid. For older baseline files without suite
 metadata, it falls back to matching test names.
@@ -514,7 +514,7 @@ The smoke test currently validates:
 
 ## Pytest Integration
 
-AgentCheck tests can also run through `pytest`.
+Invarium tests can also run through `pytest`.
 
 Examples:
 
@@ -526,15 +526,15 @@ python -m pytest integration_examples -q
 
 How it works:
 
-- decorated `@agent_test(...)` functions are collected by the AgentCheck pytest plugin
+- decorated `@agent_test(...)` functions are collected by the Invarium pytest plugin
 - pytest does not run them as normal fixture-based test functions
-- each collected test still executes through AgentCheck's repeated-run logic
+- each collected test still executes through Invarium's repeated-run logic
 
 ## CI Output
 
-AgentCheck already writes JSON and Markdown artifacts under `.agentcheck/reports/`.
+Invarium already writes JSON and Markdown artifacts under `.invarium/reports/`.
 
-In GitHub Actions, if `GITHUB_STEP_SUMMARY` is available, AgentCheck also writes
+In GitHub Actions, if `GITHUB_STEP_SUMMARY` is available, Invarium also writes
 the Markdown report to the step summary automatically.
 
 ## Adapters
@@ -596,19 +596,19 @@ It currently:
 Pattern:
 
 ```python
-from agentcheck import LangGraphAdapter, agent_test, expect
+from invarium import LangGraphAdapter, agent_test, expect
 
 adapter = LangGraphAdapter()
 
 
 @agent_test(runs=3, agent_factory=build_graph)
 def test_langgraph_agent(graph):
-    result = adapter.run(graph, "What does AgentCheck do?")
+    result = adapter.run(graph, "What does Invarium do?")
 
     check = expect(result, collect=True)
     check.used_tool("search_docs")
     check.used_tools_in_order(["search_docs"])
-    check.final_output_contains("AgentCheck")
+    check.final_output_contains("Invarium")
     check.did_not_error()
     check.verify()
     return result
@@ -619,7 +619,7 @@ def test_langgraph_agent(graph):
 Pattern:
 
 ```python
-from agentcheck import OpenAIAgentsAdapter, agent_test, expect
+from invarium import OpenAIAgentsAdapter, agent_test, expect
 
 adapter = OpenAIAgentsAdapter()
 
@@ -693,7 +693,7 @@ Current limitations include:
 
 ## Recommended Adoption Path
 
-If you are integrating AgentCheck into a real project, the safest path is:
+If you are integrating Invarium into a real project, the safest path is:
 
 1. start with one small agent test
 2. test one high-signal behavior contract
@@ -707,11 +707,11 @@ Do not try to test every behavior on day one.
 
 ## Summary
 
-The best way to think about AgentCheck is:
+The best way to think about Invarium is:
 
 - not as an answer scorer
 - not as an observability dashboard
 - but as a small behavioral contract layer for agents
 
 You define what correct behavior means.
-AgentCheck helps you run it repeatedly, record it, and catch regressions before production.
+Invarium helps you run it repeatedly, record it, and catch regressions before production.

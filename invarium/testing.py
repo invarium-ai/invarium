@@ -22,7 +22,7 @@ def agent_test(*, runs: int = 1, agent_factory: Callable[[], Any] | None = None)
             runs=runs,
             agent_factory=agent_factory,
         )
-        setattr(func, "__agentcheck_test__", definition)
+        setattr(func, "__invarium_test__", definition)
         setattr(func, "__test__", False)
         REGISTERED_TESTS.append(definition)
         return func

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-ARTIFACT_ROOT = Path(".agentcheck")
+ARTIFACT_ROOT = Path(".invarium")
 TRACE_DIR = ARTIFACT_ROOT / "traces"
 BASELINE_DIR = ARTIFACT_ROOT / "baselines"
 REPORT_DIR = ARTIFACT_ROOT / "reports"

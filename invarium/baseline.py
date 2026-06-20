@@ -84,7 +84,7 @@ def load_baseline_from_file(path: Path) -> dict | None:
 
 def export_baseline(dest: Path) -> Path:
     if not BASELINE_FILE.exists():
-        raise FileNotFoundError("No baseline found. Run `agentcheck bless` to create one.")
+        raise FileNotFoundError("No baseline found. Run `invarium bless` to create one.")
     data = read_json(BASELINE_FILE)
     dest.parent.mkdir(parents=True, exist_ok=True)
     write_json(dest, data)

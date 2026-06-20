@@ -9,11 +9,11 @@
 **Pytest for AI agents — test behavior, not exact text.**
 
 [![Tests](https://github.com/invarium-ai/invarium/actions/workflows/tests.yml/badge.svg)](https://github.com/invarium-ai/invarium/actions/workflows/tests.yml)
-[![PyPI version](https://img.shields.io/pypi/v/pygent-test.svg)](https://pypi.org/project/pygent-test/)
-[![Python versions](https://img.shields.io/pypi/pyversions/pygent-test.svg)](https://pypi.org/project/pygent-test/)
+[![PyPI version](https://img.shields.io/pypi/v/invarium.svg)](https://pypi.org/project/invarium/)
+[![Python versions](https://img.shields.io/pypi/pyversions/invarium.svg)](https://pypi.org/project/invarium/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Downloads](https://static.pepy.tech/badge/pygent-test/month)](https://pepy.tech/project/pygent-test)
-[![Total downloads](https://static.pepy.tech/badge/pygent-test)](https://pepy.tech/project/pygent-test)
+[![Downloads](https://static.pepy.tech/badge/invarium/month)](https://pepy.tech/project/invarium)
+[![Total downloads](https://static.pepy.tech/badge/invarium)](https://pepy.tech/project/invarium)
 
 [Quickstart](#quickstart) · [Why Invarium](#why-invarium) · [Writing tests](#writing-a-test) · [CLI](#cli-commands) · [Docs](#documentation)
 
@@ -27,8 +27,8 @@ an agent called, in what order, how many steps it took, and whether it claimed s
 without doing the work. It then tracks that behavior over time and flags regressions
 against a saved baseline.
 
-> **Note:** Invarium is distributed on PyPI as the `pygent-test` package and exposes the
-> `agentcheck` command-line tool. Use those names when installing and running it.
+> **Note:** Invarium is distributed on PyPI as the `invarium` package and exposes the
+> `invarium` command-line tool. Use those names when installing and running it.
 
 ## Why Invarium
 
@@ -51,15 +51,15 @@ Invarium takes a different approach:
 ## Installation
 
 ```bash
-pip install pygent-test
+pip install invarium
 ```
 
 Optional framework adapters:
 
 ```bash
-pip install "pygent-test[openai]"      # OpenAI Agents SDK
-pip install "pygent-test[langgraph]"   # LangGraph
-pip install "pygent-test[crewai]"      # CrewAI
+pip install "invarium[openai]"      # OpenAI Agents SDK
+pip install "invarium[langgraph]"   # LangGraph
+pip install "invarium[crewai]"      # CrewAI
 ```
 
 Requires Python 3.10+.
@@ -68,9 +68,9 @@ Requires Python 3.10+.
 
 ```bash
 pip install -e .
-python -m agentcheck.cli test examples            # run example tests
-python -m agentcheck.cli bless examples           # save a baseline
-python -m agentcheck.cli test regression_examples # catch an intentional regression
+python -m invarium.cli test examples            # run example tests
+python -m invarium.cli bless examples           # save a baseline
+python -m invarium.cli test regression_examples # catch an intentional regression
 ```
 
 This walks you through a passing test, a saved baseline, and a regression caught with a
@@ -79,7 +79,7 @@ clear behavior diff — in about five minutes.
 ## Writing a Test
 
 ```python
-from agentcheck import agent_test, expect
+from invarium import agent_test, expect
 
 @agent_test(runs=5, agent_factory=MyAgent)
 def test_booking_agent(agent):
@@ -144,27 +144,27 @@ Every failed assertion is tagged so you know exactly what broke:
 
 ```bash
 # Run tests
-agentcheck test [path] [-k filter] [--html report.html] [--fail-on-regression]
+invarium test [path] [-k filter] [--html report.html] [--fail-on-regression]
 
 # Baselines
-agentcheck bless [path]                 # save current run as baseline
-agentcheck compare                      # re-compare last run against baseline
-agentcheck baseline list
-agentcheck baseline inspect .agentcheck/baselines/latest.json
-agentcheck baseline delete .agentcheck/baselines/old.json --yes
+invarium bless [path]                 # save current run as baseline
+invarium compare                      # re-compare last run against baseline
+invarium baseline list
+invarium baseline inspect .invarium/baselines/latest.json
+invarium baseline delete .invarium/baselines/old.json --yes
 
 # Reports
-agentcheck report [--html report.html]
+invarium report [--html report.html]
 
 # Contracts & scenario generation
-agentcheck contract init my_agent
-agentcheck contract validate agent_contract.json
-agentcheck generate scenarios agent_contract.json --stub tests/generated_tests.py
+invarium contract init my_agent
+invarium contract validate agent_contract.json
+invarium generate scenarios agent_contract.json --stub tests/generated_tests.py
 
 # Config & history
-agentcheck config init
-agentcheck history list
-agentcheck history show <run-id>
+invarium config init
+invarium history list
+invarium history show <run-id>
 ```
 
 ## Adapters
@@ -172,9 +172,9 @@ agentcheck history show <run-id>
 | Adapter | Install | Use with |
 |---|---|---|
 | `PythonAdapter` | built-in | any Python callable |
-| `OpenAIAgentsAdapter` | `pygent-test[openai]` | OpenAI Agents SDK |
-| `LangGraphAdapter` | `pygent-test[langgraph]` | LangGraph `StateGraph` |
-| `CrewAIAdapter` | `pygent-test[crewai]` | CrewAI Crew / Agent |
+| `OpenAIAgentsAdapter` | `invarium[openai]` | OpenAI Agents SDK |
+| `LangGraphAdapter` | `invarium[langgraph]` | LangGraph `StateGraph` |
+| `CrewAIAdapter` | `invarium[crewai]` | CrewAI Crew / Agent |
 | `HttpAdapter` | built-in | any HTTP endpoint |
 
 ### Testing a Deployed Agent
@@ -182,7 +182,7 @@ agentcheck history show <run-id>
 Test a live agent over HTTP without importing any local code:
 
 ```python
-from agentcheck import agent_test, expect, HttpAdapter
+from invarium import agent_test, expect, HttpAdapter
 
 adapter = HttpAdapter(
     "https://my-agent.example.com/run",
@@ -206,13 +206,13 @@ adapter = HttpAdapter.from_env(
 
 ## Regression Detection
 
-When a baseline exists, `agentcheck test` compares the current run and reports success
+When a baseline exists, `invarium test` compares the current run and reports success
 rate change, step/latency/cost drift, tool coverage drops, primary tool path changes,
 and a failure-category breakdown.
 
 ```bash
-agentcheck bless examples                          # save a baseline
-agentcheck test examples --fail-on-regression      # future runs compare automatically
+invarium bless examples                          # save a baseline
+invarium test examples --fail-on-regression      # future runs compare automatically
 ```
 
 ## Flakiness Detection
@@ -226,7 +226,7 @@ runs. Both appear in CLI output and in the HTML/Markdown reports.
 Define expected behavior once in a reusable file:
 
 ```bash
-agentcheck contract init booking_agent
+invarium contract init booking_agent
 ```
 
 ```json
@@ -242,7 +242,7 @@ agentcheck contract init booking_agent
 ```
 
 ```bash
-agentcheck contract validate agent_contract.json
+invarium contract validate agent_contract.json
 ```
 
 ### Scenario Generation
@@ -250,7 +250,7 @@ agentcheck contract validate agent_contract.json
 Generate starter test scenarios from a contract:
 
 ```bash
-agentcheck generate scenarios agent_contract.json --stub tests/generated.py
+invarium generate scenarios agent_contract.json --stub tests/generated.py
 ```
 
 This writes a JSON scenario pack and a ready-to-edit Python test file covering
@@ -259,24 +259,24 @@ and `unsupported_success`.
 
 ## Reports & Artifacts
 
-Every `agentcheck test` run writes a self-contained HTML report to
-`.agentcheck/reports/latest.html` — open it in any browser, no server needed. Use
+Every `invarium test` run writes a self-contained HTML report to
+`.invarium/reports/latest.html` — open it in any browser, no server needed. Use
 `--html path` to write it elsewhere.
 
 | File | Contents |
 |---|---|
-| `.agentcheck/reports/latest.json` | Full session report (JSON) |
-| `.agentcheck/reports/latest.md` | Markdown report |
-| `.agentcheck/reports/latest.html` | Self-contained HTML report |
-| `.agentcheck/traces/latest.json` | Raw per-run traces |
-| `.agentcheck/history.json` | Append-only run log (capped at 200 entries) |
+| `.invarium/reports/latest.json` | Full session report (JSON) |
+| `.invarium/reports/latest.md` | Markdown report |
+| `.invarium/reports/latest.html` | Self-contained HTML report |
+| `.invarium/traces/latest.json` | Raw per-run traces |
+| `.invarium/history.json` | Append-only run log (capped at 200 entries) |
 
 ## Configuration
 
-Create `agentcheck.json` in your project root to set defaults (CLI flags always win):
+Create `invarium.json` in your project root to set defaults (CLI flags always win):
 
 ```bash
-agentcheck config init
+invarium config init
 ```
 
 ```json
@@ -291,13 +291,13 @@ agentcheck config init
 
 ```yaml
 - name: Run Invarium
-  run: agentcheck test . --fail-on-regression --html reports/agentcheck.html
+  run: invarium test . --fail-on-regression --html reports/invarium.html
 
 - name: Upload report
   uses: actions/upload-artifact@v4
   with:
     name: invarium-report
-    path: reports/agentcheck.html
+    path: reports/invarium.html
 ```
 
 The Markdown report is automatically appended to the GitHub Actions step summary when
@@ -315,8 +315,8 @@ pytest tests -q
 Filter by name with `-k`:
 
 ```bash
-agentcheck test -k booking
-agentcheck test -k "research or booking"
+invarium test -k booking
+invarium test -k "research or booking"
 ```
 
 ## Documentation

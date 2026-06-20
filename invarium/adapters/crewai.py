@@ -16,7 +16,7 @@ class CrewAIAdapter(BaseAdapter):
     Usage with a Crew::
 
         from crewai import Crew, Agent, Task
-        from agentcheck import agent_test, expect, CrewAIAdapter
+        from invarium import agent_test, expect, CrewAIAdapter
 
         adapter = CrewAIAdapter()
 
