@@ -220,6 +220,26 @@ Likely high-value next targets:
 - CrewAI
 - another framework only if users ask for it
 
+### Async Python Agents
+
+`PythonAdapter` supports both synchronous and asynchronous agent callables.
+
+```python
+from invarium.adapters.python import PythonAdapter
+
+class AsyncAgent:
+    async def run(self, prompt):
+        return {
+            "input": prompt,
+            "final_output": "done",
+        }
+
+adapter = PythonAdapter()
+result = adapter.run(AsyncAgent(), "hello")
+```
+
+Async results are automatically awaited before being normalized into an `AgentResult`.
+
 ## Summary
 
 The adapter layer should stay small and boring.
