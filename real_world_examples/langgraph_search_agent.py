@@ -8,7 +8,7 @@ Configure via environment (defaults in parentheses):
 
 - ``RW_LLM_PROVIDER``  openai | gemini      (openai)
 - ``RW_OPENAI_MODEL``  e.g. gpt-4o-mini      (gpt-4o-mini)
-- ``RW_GEMINI_MODEL``  e.g. gemini-2.0-flash (gemini-2.0-flash)
+- ``RW_GEMINI_MODEL``  e.g. gemini-2.5-flash (gemini-2.5-flash)
 
 Keys are read from the repo-root ``.env`` (gitignored). Swapping the provider or
 model lets you bless one configuration as a baseline and catch real behavioral
@@ -87,7 +87,7 @@ def _build_llm():
         from langchain_google_genai import ChatGoogleGenerativeAI
 
         return ChatGoogleGenerativeAI(
-            model=os.environ.get("RW_GEMINI_MODEL", "gemini-2.0-flash"),
+            model=os.environ.get("RW_GEMINI_MODEL", "gemini-2.5-flash"),
             temperature=0,
         )
     _require_key("OPENAI_API_KEY")
