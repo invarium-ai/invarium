@@ -50,7 +50,18 @@ RW_OPENAI_MODEL=gpt-3.5-turbo invarium test real_world_examples -k search
 
 # or switch provider entirely
 RW_LLM_PROVIDER=gemini invarium test real_world_examples -k search
+
+# relax the system prompt and see whether the agent still grounds with search
+RW_WEAK_PROMPT=1 invarium test real_world_examples -k grounds
 ```
+
+> Honest note from live runs: on the "current CEO of OpenAI" question, both
+> `gpt-4o-mini` and `gpt-3.5-turbo` keep calling `tavily_search` even under the
+> relaxed prompt — well-aligned models are cautious about time-sensitive facts, so
+> no regression appears. `RW_WEAK_PROMPT=1` reliably induces a dropped-search
+> regression on *stable* facts the model is confident it already knows (e.g.
+> "Who wrote Hamlet?"). The point of Invarium is exactly this: you find out which
+> case you're in from the behavior, not from guessing.
 
 Because these are live, non-deterministic agents, the `runs=N` repetition and
 flakiness score matter: a single pass doesn't prove the behavior is stable.

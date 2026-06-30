@@ -27,6 +27,7 @@ from langgraph.prebuilt import create_react_agent
 
 load_dotenv(find_dotenv(usecwd=True))
 
+# The "good" prompt forces the agent to ground factual answers in a real search.
 _SYSTEM_PROMPT = (
     "You are a helpful research assistant. "
     "For any question about current or real-world facts (people, prices, events, "
@@ -35,6 +36,21 @@ _SYSTEM_PROMPT = (
     "For any arithmetic, call the `calculator` tool instead of computing it yourself. "
     "Keep the final answer to one or two short sentences."
 )
+
+# A realistic "regression": someone relaxes the system prompt (RW_WEAK_PROMPT=1) and
+# the model starts answering factual questions from memory instead of searching.
+# Same code, same model — only the prompt changed. Invarium catches the dropped
+# tavily_search against a blessed baseline.
+_WEAK_SYSTEM_PROMPT = (
+    "You are a helpful assistant. Answer the user's question. "
+    "You may use the available tools if you think they are needed. "
+    "Keep the final answer to one or two short sentences."
+)
+
+
+def _system_prompt() -> str:
+    weak = os.environ.get("RW_WEAK_PROMPT", "") not in ("", "0", "false", "False")
+    return _WEAK_SYSTEM_PROMPT if weak else _SYSTEM_PROMPT
 
 
 def _require_key(name: str) -> str:
@@ -106,4 +122,4 @@ def build_search_agent():
 
     llm = _build_llm()
     tools = [TavilySearch(max_results=3), calculator]
-    return create_react_agent(llm, tools=tools, prompt=_SYSTEM_PROMPT)
+    return create_react_agent(llm, tools=tools, prompt=_system_prompt())
