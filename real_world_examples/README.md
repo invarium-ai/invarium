@@ -8,6 +8,7 @@ fractions of a cent per run.
 |---|---|---|---|
 | `test_langgraph_search_agent.py` | ReAct search+calculator agent | LangGraph `create_react_agent` + OpenAI/Gemini + Tavily | grounds factual answers in a real web search; uses the calculator for math; no runaway search loops |
 | `test_openai_support_agent.py` | Support / refund agent | OpenAI Agents SDK | verifies the order before refunding; never claims a refund without calling the refund tool |
+| `test_crewai_research_crew.py` | Researcher + Writer crew | CrewAI | a multi-agent sequential crew runs its tasks and finishes cleanly within a step budget |
 
 ## Setup
 
@@ -23,7 +24,7 @@ TAVILY_API_KEY=tvly-...
 Install the connectors:
 
 ```bash
-pip install langchain-openai langchain-google-genai langchain-tavily openai-agents
+pip install langchain-openai langchain-google-genai langchain-tavily openai-agents crewai
 ```
 
 ## Run
