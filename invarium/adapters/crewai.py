@@ -101,8 +101,27 @@ class CrewAIAdapter(BaseAdapter):
             errors=errors,
             latency=latency,
             cost=float(cost) if cost is not None else None,
-            metadata={"adapter": "crewai", "usage": usage},
+            metadata={"adapter": "crewai", "usage": self._serialize_usage(usage)},
         )
+
+    def _serialize_usage(self, usage: Any) -> Any:
+        """Coerce CrewAI usage metrics into a JSON-serializable form.
+
+        Newer CrewAI returns a pydantic ``UsageMetrics`` object for ``token_usage``,
+        which is not JSON serializable and would break trace/report writing.
+        """
+        if usage is None or isinstance(usage, (str, int, float, bool, dict)):
+            return usage
+        for method in ("model_dump", "dict"):
+            if hasattr(usage, method):
+                try:
+                    return getattr(usage, method)()
+                except Exception:  # noqa: BLE001
+                    pass
+        try:
+            return dict(usage)
+        except Exception:  # noqa: BLE001
+            return str(usage)
 
     def _extract_output(self, raw: Any) -> str:
         if raw is None:
