@@ -97,6 +97,30 @@ def test_booking_agent(agent):
 `runs=5` executes the test five times so Invarium can measure stability, not just a
 single lucky pass.
 
+### Parallel runs
+
+By default the `runs` repetitions execute sequentially. For live-model tests this
+means `runs=5` is five serial API calls — slow in CI. Opt into concurrency and the
+repetitions run on a thread pool instead (each run is independent), cutting
+wall-clock time roughly N-fold:
+
+```python
+@agent_test(runs=5, parallel=True, agent_factory=MyAgent)   # ~5x faster in CI
+def test_booking_agent(agent):
+    ...
+```
+
+Use `max_workers` to cap concurrency (e.g. to respect provider rate limits);
+setting `max_workers > 1` also implies `parallel=True`:
+
+```python
+@agent_test(runs=10, max_workers=3, agent_factory=MyAgent)   # at most 3 in flight
+def test_booking_agent(agent):
+    ...
+```
+
+Parallelism is opt-in so the default never surprises anyone's rate limits.
+
 ## Assertions
 
 ```python
