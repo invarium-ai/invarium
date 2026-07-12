@@ -325,6 +325,7 @@ invarium test -k "research or booking"
 - [ADAPTER_GUIDE.md](ADAPTER_GUIDE.md) — how to write a custom adapter
 - [REAL_WORLD_TESTING.md](REAL_WORLD_TESTING.md) — live OpenAI agent testing setup
 - [ROADMAP.md](ROADMAP.md) — what's done and where the project is going
+- [framework_examples/perseus_context_regression](framework_examples/perseus_context_regression/README.md) — context-regression testing for [Perseus](https://perseus.observer)-powered agents
 
 ## Contributing
 
