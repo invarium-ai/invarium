@@ -31,30 +31,45 @@ class InvariumItem(pytest.Item):
         return super().repr_failure(excinfo, style=style)
 
     def reportinfo(self):
-        return self.path, 0, f"invarium: {self.definition.name}"
+        # ``Node.path`` (pathlib) was added in pytest 7.0; fall back to the
+        # deprecated ``fspath`` on pytest 6.x so the plugin stays compatible.
+        location = getattr(self, "path", None)
+        if location is None:
+            location = self.fspath
+        return location, 0, f"invarium: {self.definition.name}"
 
 
-class InvariumFile(pytest.Module):
-    def collect(self):
-        module = self._getobj()
-        for name in dir(module):
-            obj = getattr(module, name)
-            definition = getattr(obj, "__invarium_test__", None)
-            if definition is None:
-                continue
-            yield InvariumItem.from_parent(
-                self,
-                name=definition.name,
-                definition=definition,
-            )
+@pytest.hookimpl(tryfirst=True)
+def pytest_pycollect_makeitem(collector, name, obj):  # noqa: ANN001
+    """Turn ``@agent_test`` functions into Invarium items during normal collection.
 
+    We deliberately hook at the *item* level (``pytest_pycollect_makeitem``)
+    rather than claiming whole files (``pytest_collect_file``). This is the key
+    to being a well-behaved, globally auto-loaded plugin:
 
-def pytest_collect_file(file_path, parent):  # noqa: ANN001
-    if file_path.suffix != ".py":
+    * The builtin ``Module`` collector still owns every ``test_*.py`` file, so
+      ordinary ``def test_*`` functions, classes, fixtures and parametrization
+      are collected exactly as they would be without Invarium installed.
+    * Only objects carrying ``__invarium_test__`` (set by :func:`agent_test`)
+      are converted into :class:`InvariumItem`. Everything else returns ``None``
+      and flows through pytest's default collection untouched.
+
+    An earlier version returned a custom ``pytest.Module`` subclass from
+    ``pytest_collect_file`` for *every* matching file. That hijacked collection
+    of files Invarium had no business touching and made an installed-but-unused
+    Invarium silently interfere with a project's normal test suite.
+    ``pytest_pycollect_makeitem`` also has a stable signature across pytest
+    6.x-9.x, unlike ``pytest_collect_file`` whose parameter was renamed
+    (``path`` -> ``file_path``) in pytest 7.0.
+    """
+    definition = getattr(obj, "__invarium_test__", None)
+    if definition is None:
         return None
-    if not (file_path.name.startswith("test_") or file_path.name.endswith("_test.py")):
-        return None
-    return InvariumFile.from_parent(parent, path=file_path)
+    return InvariumItem.from_parent(
+        collector,
+        name=definition.name,
+        definition=definition,
+    )
 
 
 def _format_failure_report(report) -> str:  # noqa: ANN001
