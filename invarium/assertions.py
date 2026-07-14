@@ -142,6 +142,28 @@ class Expectation:
             f"Expected fewer than {limit} steps, but saw {self.result.steps}.",
             category="step_budget_exceeded",
         )
+    
+    def latency_less_than(self, limit_ms: float) -> "Expectation":
+        """Assert that the agent's response latency is below the specified millisecond limit."""
+        passed = self.result.latency is not None and self.result.latency < limit_ms
+        
+        # Use the :g format specifier as suggested by Copilot for stable, clean float representation
+        limit_str = f"{limit_ms:g}"
+        actual_str = f"{self.result.latency:g}" if self.result.latency is not None else "None"
+
+        failure_message = (
+            f"Expected latency below {limit_str} ms, but latency was not recorded (None)."
+            if self.result.latency is None
+            else f"Expected latency below {limit_str} ms, but saw {actual_str} ms."
+        )
+        
+        return self._check(
+            "latency_less_than",
+            passed,
+            f"Completed with latency {actual_str} ms, below limit {limit_str} ms.",
+            failure_message,
+            category="latency_exceeded",
+        )
 
     def finished_successfully(self) -> "Expectation":
         return self._check(

@@ -109,6 +109,7 @@ expect(result).used_tools_in_order(["search", "summarize"])
 expect(result).used_any_tool()
 expect(result).tool_succeeded("book")
 expect(result).steps_less_than(10)
+expect(result).latency_less_than(500)
 expect(result).finished_successfully()
 expect(result).did_not_error()
 expect(result).final_output_contains("confirmed")
@@ -135,6 +136,7 @@ Every failed assertion is tagged so you know exactly what broke:
 | `missing_required_tool` | `used_tool`, `used_any_tool`, `used_tool_times`, … |
 | `wrong_tool_order` | `used_tools_in_order` |
 | `step_budget_exceeded` | `steps_less_than` |
+| `latency_exceeded` | `latency_less_than` |
 | `unsupported_success_claim` | `did_not_claim_confirmation_without_tool` |
 | `runtime_error` | `finished_successfully`, `did_not_error` |
 | `output_mismatch` | `final_output_contains`, `final_output_matches_pattern` |
