@@ -143,6 +143,23 @@ class Expectation:
             category="step_budget_exceeded",
         )
     
+    def cost_less_than(self, limit: float) -> "Expectation":
+        cost = self.result.cost
+        if cost is None:
+            failure = (
+                f"Expected cost below {limit}, but no cost was recorded on the "
+                "result (the adapter did not populate `cost`)."
+            )
+        else:
+            failure = f"Expected cost below {limit}, but saw {cost}."
+        return self._check(
+            "cost_less_than",
+            cost is not None and cost < limit,
+            f"Cost {cost} is below {limit}.",
+            failure,
+            category="cost_exceeded",
+        )
+
     def latency_less_than(self, limit_ms: float) -> "Expectation":
         """Assert that the agent's response latency is below the specified millisecond limit."""
         passed = self.result.latency is not None and self.result.latency < limit_ms

@@ -501,3 +501,30 @@ def test_contract_round_trips_through_json():
     assert loaded.name == contract.name
     assert loaded.step_budget == contract.step_budget
     assert loaded.scenario_tags == contract.scenario_tags
+
+
+def test_cost_less_than_passes_under_limit():
+    result = AgentResult(input="q", final_output="done", steps=1, cost=0.01)
+    expect(result).cost_less_than(0.05).verify()
+
+
+def test_cost_less_than_fails_over_limit():
+    result = AgentResult(input="q", final_output="done", steps=1, cost=0.10)
+    import pytest
+    with pytest.raises(Exception):
+        expect(result).cost_less_than(0.05).verify()
+
+
+def test_cost_less_than_fails_when_cost_missing():
+    # No cost recorded: a budget assertion must fail closed, not silently pass.
+    result = AgentResult(input="q", final_output="done", steps=1)
+    import pytest
+    with pytest.raises(Exception):
+        expect(result).cost_less_than(0.05).verify()
+
+
+def test_cost_less_than_tags_cost_exceeded_category():
+    result = AgentResult(input="q", final_output="done", steps=1, cost=0.10)
+    check = expect(result, collect=True)
+    check.cost_less_than(0.05)
+    assert check.records[-1].category == "cost_exceeded"
