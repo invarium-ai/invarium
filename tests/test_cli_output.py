@@ -1,6 +1,18 @@
 from __future__ import annotations
 
-from invarium.cli import _render_comparison, _render_session_summary_dict
+import pytest
+
+from invarium.cli import _render_comparison, _render_session_summary_dict, build_parser
+
+
+def test_version_flag_prints_installed_version_and_exits(monkeypatch, capsys):
+    monkeypatch.setattr("invarium.cli.package_version", lambda package: "9.9.9")
+
+    with pytest.raises(SystemExit) as exc_info:
+        build_parser().parse_args(["--version"])
+
+    assert exc_info.value.code == 0
+    assert capsys.readouterr().out == "invarium 9.9.9\n"
 
 
 def test_render_session_summary_dict_shows_minimal_structured_output():

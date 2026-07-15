@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from importlib.metadata import version as package_version
 from pathlib import Path
 
 from .baseline import delete_baseline, export_baseline, import_baseline, list_baselines, load_baseline, load_baseline_from_file, save_baseline
@@ -37,6 +38,11 @@ ANSI_COLORS = {
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="invarium")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {package_version('invarium')}",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     for command in ("test", "bless", "compare", "report"):
