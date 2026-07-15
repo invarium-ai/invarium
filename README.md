@@ -171,6 +171,9 @@ Every failed assertion is tagged so you know exactly what broke:
 ## CLI Commands
 
 ```bash
+# Show the installed version
+invarium --version
+
 # Run tests
 invarium test [path] [-k filter] [--html report.html] [--fail-on-regression]
 
